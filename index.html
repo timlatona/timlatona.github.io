@@ -155,21 +155,16 @@
     return ctx;
   }
 
-  function playChord(){
-    const c = ensureCtx();
-    const now = c.currentTime;
-    const notes = [130.81, 329.63, 392.00, 466.16, 554.37]; // C3 E4 G4 Bb4 Db5
-
+  function playPad(c, notes, startTime, { duration, peakGain, sustainGain, filterFreq }){
     const master = c.createGain();
-    master.gain.setValueAtTime(0, now);
-    master.gain.linearRampToValueAtTime(0.22, now + 0.08);
-    master.gain.linearRampToValueAtTime(0.15, now + 0.7);
-    master.gain.linearRampToValueAtTime(0, now + 3.4);
+    master.gain.setValueAtTime(0, startTime);
+    master.gain.linearRampToValueAtTime(peakGain, startTime + 0.08);
+    master.gain.linearRampToValueAtTime(sustainGain, startTime + 0.5);
+    master.gain.linearRampToValueAtTime(0, startTime + duration);
 
     const filter = c.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 2200;
-
+    filter.frequency.value = filterFreq;
     master.connect(filter).connect(c.destination);
 
     notes.forEach((freq, i) => {
@@ -179,9 +174,41 @@
       const g = c.createGain();
       g.gain.value = i === 0 ? 1 : 0.55;
       osc.connect(g).connect(master);
-      osc.start(now);
-      osc.stop(now + 3.5);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.1);
     });
+  }
+
+  function pluckNote(c, freq, startTime, duration, peakGain){
+    const osc = c.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, startTime);
+    g.gain.linearRampToValueAtTime(peakGain, startTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(g).connect(c.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+
+  function playChord(){
+    const c = ensureCtx();
+    const now = c.currentTime;
+
+    // V: C7♭9 stab
+    playPad(c, [130.81, 329.63, 392.00, 466.16, 554.37], now, // C3 E4 G4 Bb4 Db5
+      { duration: 1.0, peakGain: 0.22, sustainGain: 0.15, filterFreq: 2200 });
+
+    // I: resolves to Fmaj9
+    const resolveAt = now + 0.85;
+    playPad(c, [174.61, 220.00, 261.63, 329.63, 392.00], resolveAt, // F3 A3 C4 E4 G4
+      { duration: 3.3, peakGain: 0.2, sustainGain: 0.13, filterFreq: 2600 });
+
+    // a little keyboard lick landing on the root, chromatic approach at the end
+    const lick = [523.25, 440.00, 392.00, 369.99, 349.23]; // C5 A4 G4 F#4 F4
+    const lickStart = resolveAt + 0.15;
+    lick.forEach((freq, i) => pluckNote(c, freq, lickStart + i * 0.13, 0.4, 0.15));
   }
 
   function tryAutoplay(){

@@ -1,7 +1,220 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>c7b9</title>
+<style>
+  :root{
+    --paper: #efe4c9;
+    --paper-dark: #e5d7b3;
+    --ink: #4a3d28;
+    --ink-faint: #6b5a3e;
+    --accent: #a9391f;
+  }
+  html, body{
+    margin: 0;
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    overflow: hidden;
+  }
+  body{
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  /* faded fake-book background */
+  .chart{
+    position: fixed;
+    inset: -10%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    transform: rotate(-3deg);
+    color: var(--ink-faint);
+    opacity: 0.28;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+  .chart-line{
+    white-space: nowrap;
+    font-size: clamp(1.4rem, 3.6vw, 2.6rem);
+    letter-spacing: 0.05em;
+    font-style: italic;
+  }
+  .chart-line .bar{ padding: 0 0.6em; border-right: 1px solid currentColor; }
+  .chart-line .bar:last-child{ border-right: none; }
+  .chart-line mark{
+    background: none;
+    color: var(--accent);
+    font-weight: bold;
+    font-style: normal;
+  }
+
+  body::after{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at center, rgba(239,228,201,0) 40%, rgba(74,61,40,0.35) 100%),
+      repeating-radial-gradient(circle at 20% 30%, rgba(74,61,40,0.03) 0, rgba(74,61,40,0.03) 1px, transparent 2px, transparent 4px);
+  }
+
+  main{
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 2rem 2.5rem;
+    background: rgba(239, 228, 201, 0.82);
+    border: 1px solid rgba(74,61,40,0.35);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    max-width: 90vw;
+  }
+  .eyebrow{
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+    margin-bottom: 0.5rem;
+  }
+  h1{
+    font-size: clamp(3.5rem, 14vw, 7rem);
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  h1 .flat{ font-family: Georgia, serif; }
+  p.tag{
+    color: var(--ink-faint);
+    font-style: italic;
+    margin: 0.75rem 0 1.5rem;
+    font-size: 1rem;
+  }
+  button{
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.6em 1.4em;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+  }
+  button:hover{ background: var(--accent); }
+  .hint{
+    margin-top: 0.9rem;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    min-height: 1.2em;
+  }
+</style>
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+
+<div class="chart" aria-hidden="true" id="chart"></div>
+
+<main>
+  <div class="eyebrow">the changes</div>
+  <h1>C7<span class="flat">&#9837;</span>9</h1>
+  <p class="tag">dominant seven, flat nine</p>
+  <button id="playBtn" type="button">&#9658; play it again</button>
+  <div class="hint" id="hint">click anywhere if you don't hear it</div>
+</main>
+
+<script>
+  // faded fake-book background: tile the same 8-bar line down the page
+  const bars = [
+    'Dm7', 'G7', 'Cmaj7 A7♭9', 'Dm7',
+    '*C7♭9*', 'Fmaj7', 'Fm6', 'Cmaj7 A7♭9'
+  ];
+  function renderLine(){
+    return bars.map(bar => {
+      const marked = bar.startsWith('*');
+      const text = marked ? bar.slice(1, -1) : bar;
+      return `<span class="bar">${marked ? `<mark>${text}</mark>` : text}</span>`;
+    }).join('');
+  }
+  const chartEl = document.getElementById('chart');
+  const line = `<div class="chart-line">${renderLine()}</div>`;
+  chartEl.innerHTML = line.repeat(9);
+
+  // synthesize and play a C7b9 chord with the Web Audio API
+  let ctx, played = false;
+  const hint = document.getElementById('hint');
+
+  function ensureCtx(){
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+
+  function playChord(){
+    const c = ensureCtx();
+    const now = c.currentTime;
+    const notes = [130.81, 329.63, 392.00, 466.16, 554.37]; // C3 E4 G4 Bb4 Db5
+
+    const master = c.createGain();
+    master.gain.setValueAtTime(0, now);
+    master.gain.linearRampToValueAtTime(0.22, now + 0.08);
+    master.gain.linearRampToValueAtTime(0.15, now + 0.7);
+    master.gain.linearRampToValueAtTime(0, now + 3.4);
+
+    const filter = c.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 2200;
+
+    master.connect(filter).connect(c.destination);
+
+    notes.forEach((freq, i) => {
+      const osc = c.createOscillator();
+      osc.type = i === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = freq;
+      const g = c.createGain();
+      g.gain.value = i === 0 ? 1 : 0.55;
+      osc.connect(g).connect(master);
+      osc.start(now);
+      osc.stop(now + 3.5);
+    });
+  }
+
+  function tryAutoplay(){
+    const c = ensureCtx();
+    c.resume().then(() => {
+      if (c.state === 'running' && !played){
+        played = true;
+        playChord();
+        hint.textContent = '';
+      }
+    });
+  }
+
+  window.addEventListener('load', tryAutoplay);
+
+  ['pointerdown', 'keydown', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, () => {
+      const c = ensureCtx();
+      c.resume().then(() => {
+        if (!played){
+          played = true;
+          playChord();
+          hint.textContent = '';
+        }
+      });
+    });
+  });
+
+  document.getElementById('playBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    ensureCtx().resume().then(() => { played = true; hint.textContent = ''; playChord(); });
+  });
+</script>
+
 </body>
 </html>

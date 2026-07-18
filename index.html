@@ -196,19 +196,23 @@
     const c = ensureCtx();
     const now = c.currentTime;
 
-    // V: C7♭9 stab
+    // V: C7♭9 — hold it
     playPad(c, [130.81, 329.63, 392.00, 466.16, 554.37], now, // C3 E4 G4 Bb4 Db5
-      { duration: 1.0, peakGain: 0.22, sustainGain: 0.15, filterFreq: 2200 });
+      { duration: 1.7, peakGain: 0.22, sustainGain: 0.16, filterFreq: 2200 });
+
+    // a short riff over the tail of the dominant, leading into the resolution
+    const riff = [523.25, 466.16, 415.30, 392.00]; // C5 Bb4 Ab4 G4
+    const riffStart = now + 1.0;
+    riff.forEach((freq, i) => pluckNote(c, freq, riffStart + i * 0.14, 0.3, 0.13));
+
+    // Ab/A double-stop crush landing right as F hits
+    const resolveAt = now + 1.6;
+    pluckNote(c, 415.30, resolveAt - 0.04, 0.16, 0.14); // Ab4 grace note
+    pluckNote(c, 440.00, resolveAt, 1.0, 0.16);          // A4 rings into the chord
 
     // I: resolves to Fmaj9
-    const resolveAt = now + 0.85;
     playPad(c, [174.61, 220.00, 261.63, 329.63, 392.00], resolveAt, // F3 A3 C4 E4 G4
       { duration: 3.3, peakGain: 0.2, sustainGain: 0.13, filterFreq: 2600 });
-
-    // a little keyboard lick landing on the root, chromatic approach at the end
-    const lick = [523.25, 440.00, 392.00, 369.99, 349.23]; // C5 A4 G4 F#4 F4
-    const lickStart = resolveAt + 0.15;
-    lick.forEach((freq, i) => pluckNote(c, freq, lickStart + i * 0.13, 0.4, 0.15));
   }
 
   function tryAutoplay(){

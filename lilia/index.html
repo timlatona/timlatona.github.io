@@ -24,6 +24,7 @@
            align-items:center; justify-content:center; padding:24px; text-align:center; }
   #modal.open { display:flex; }
   #mcat { color:var(--gold); text-transform:uppercase; font-weight:700; letter-spacing:1px; }
+  #clue.emoji { font-size:clamp(4rem,16vw,11rem); line-height:1.2; letter-spacing:.1em; }
   #clueImg { display:none; max-width:min(90vw,600px); max-height:45vh; background:#fff; border-radius:12px; padding:16px; margin-top:16px; }
   #clue { font-size:clamp(1.4rem,5vw,3rem); font-weight:700; max-width:900px; margin:20px 0; }
   #answer { font-size:clamp(1.1rem,3.5vw,2rem); color:var(--gold); min-height:1.5em; margin-bottom:24px; }
@@ -249,6 +250,8 @@ function openClue(col, row, btn) {
   const c = ROUNDS[round][col];
   document.getElementById('mcat').textContent = c.name + ' · ' + currentValue;
   document.getElementById('clue').textContent = c.clues[row].q;
+  // clues with no letters or numbers (emoji-only) are shown extra large
+  document.getElementById('clue').classList.toggle('emoji', !/[A-Za-z0-9]/.test(c.clues[row].q));
   const im = document.getElementById('clueImg');
   if (c.clues[row].img) { im.src = c.clues[row].img; im.style.display = 'block'; }
   else { im.removeAttribute('src'); im.style.display = 'none'; }

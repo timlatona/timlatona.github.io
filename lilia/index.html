@@ -24,6 +24,7 @@
            align-items:center; justify-content:center; padding:24px; text-align:center; }
   #modal.open { display:flex; }
   #mcat { color:var(--gold); text-transform:uppercase; font-weight:700; letter-spacing:1px; }
+  #clueImg { display:none; max-width:min(90vw,600px); max-height:45vh; background:#fff; border-radius:12px; padding:16px; margin-top:16px; }
   #clue { font-size:clamp(1.4rem,5vw,3rem); font-weight:700; max-width:900px; margin:20px 0; }
   #answer { font-size:clamp(1.1rem,3.5vw,2rem); color:var(--gold); min-height:1.5em; margin-bottom:24px; }
   .scores { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-width:1100px; margin:16px auto 0; }
@@ -47,6 +48,7 @@
 
 <div id="modal">
   <div id="mcat"></div>
+  <img id="clueImg" alt="">
   <div id="clue"></div>
   <div id="answer"></div>
   <div id="award"><div style="margin-bottom:8px">Who got it?</div><span id="awardBtns"></span></div>
@@ -59,6 +61,7 @@
 <script>
 // ===== EDIT QUESTIONS HERE =====
 // Each category has 5 clues, from 100 (easiest) up to 500 (hardest).
+// Optional picture: add img: "img/file.png" (uploaded to lilia/img) or a full https:// link.
 const CATEGORIES = [
   { name: "Liliaformation", clues: [
     { q: "In what grade did Lilia join Annie Wright", a: "6th" },
@@ -90,7 +93,7 @@ const CATEGORIES = [
 { q: "Naan (an oven-baked flatbread traditionally made in a tandoor) originates from which country?", a: "India" }
   ]},
   { name: "Category 5", clues: [
-    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Sample: Name this logo", img: "img/sample.svg", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
     { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
     { q: "Placeholder clue", a: "TBD" },
   ]},
@@ -132,6 +135,9 @@ function openClue(col, row, btn) {
   const c = CATEGORIES[col];
   document.getElementById('mcat').textContent = c.name + ' · ' + (row + 1) * 100;
   document.getElementById('clue').textContent = c.clues[row].q;
+  const im = document.getElementById('clueImg');
+  if (c.clues[row].img) { im.src = c.clues[row].img; im.style.display = 'block'; }
+  else { im.removeAttribute('src'); im.style.display = 'none'; }
   document.getElementById('answer').textContent = '';
   document.getElementById('revealBtn').style.display = '';
   document.getElementById('modal').classList.add('open');

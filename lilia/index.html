@@ -53,12 +53,13 @@
 </head>
 <body>
 <h1>🎂 Lilia's Birthday Trivia 🎉</h1>
-<p class="sub">Pick a category and a value</p>
+<p class="sub" id="roundLabel">Round 1 · Pick a category and a value</p>
 <div class="layout">
   <div class="board" id="board"></div>
   <aside class="side">
     <div class="scores" id="scores"></div>
-    <div class="bar"><button onclick="resetBoard()">Reset board</button></div>
+    <div class="bar"><button id="roundBtn" onclick="switchRound()">Go to Double Round →</button></div>
+    <div class="bar"><button onclick="resetBoard()">Reset game</button></div>
   </aside>
 </div>
 
@@ -116,12 +117,44 @@ const CATEGORIES = [
     { q: "Name this brand", img: "img/dutch.svg", a: "Dutch Bros" },
   ]},
 ];
+// ROUND 2: the Double Round. Same format, points are doubled (200 to 1000).
+const ROUND2 = [
+  { name: "Round 2 Category 1", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Round 2 Category 2", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Round 2 Category 3", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Round 2 Category 4", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Round 2 Category 5", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+];
+
 const PLAYERS = ["Lilia", "Maeve", "Maisie", "Piper"];
 // ===============================
 
 const board = document.getElementById('board');
-let current = null, currentValue = 0;
+const ROUNDS = [CATEGORIES, ROUND2];
+let round = 0, current = null, currentCol = 0, currentRow = 0, currentValue = 0;
 let scores = PLAYERS.map(() => 0);
+let used = [new Set(), new Set()];   // tiles already played, per round
+const value = row => (row + 1) * 100 * (round + 1);
 
 function drawScores() {
   document.getElementById('scores').innerHTML = PLAYERS.map((n, i) =>
@@ -132,26 +165,32 @@ function adjust(i, pts) { scores[i] += pts; drawScores(); }
 function award(i) { if (i >= 0) adjust(i, currentValue); closeClue(); }
 
 function build() {
+  const cats = ROUNDS[round];
   board.innerHTML = '';
-  CATEGORIES.forEach(c => {
+  cats.forEach(c => {
     const d = document.createElement('div');
     d.className = 'cat'; d.textContent = c.name; board.appendChild(d);
   });
   for (let row = 0; row < 5; row++) {
-    CATEGORIES.forEach((c, col) => {
+    cats.forEach((c, col) => {
       const b = document.createElement('button');
-      b.className = 'tile'; b.textContent = (row + 1) * 100;
+      b.className = 'tile'; b.textContent = value(row);
+      if (used[round].has(col + ',' + row)) b.classList.add('used');
       b.onclick = () => openClue(col, row, b);
       board.appendChild(b);
     });
   }
+  document.getElementById('roundLabel').textContent =
+    (round ? 'Double Round · Points are doubled!' : 'Round 1 · Pick a category and a value');
+  document.getElementById('roundBtn').textContent = round ? '← Back to Round 1' : 'Go to Double Round →';
 }
+function switchRound() { round = 1 - round; build(); }
 function openClue(col, row, btn) {
   if (btn.classList.contains('used')) return;
-  current = btn; currentValue = (row + 1) * 100;
+  current = btn; currentCol = col; currentRow = row; currentValue = value(row);
   document.getElementById('award').classList.remove('show');
-  const c = CATEGORIES[col];
-  document.getElementById('mcat').textContent = c.name + ' · ' + (row + 1) * 100;
+  const c = ROUNDS[round][col];
+  document.getElementById('mcat').textContent = c.name + ' · ' + currentValue;
   document.getElementById('clue').textContent = c.clues[row].q;
   const im = document.getElementById('clueImg');
   if (c.clues[row].img) { im.src = c.clues[row].img; im.style.display = 'block'; }
@@ -161,9 +200,7 @@ function openClue(col, row, btn) {
   document.getElementById('modal').classList.add('open');
 }
 function reveal() {
-  const col = [...board.querySelectorAll('.tile')].indexOf(current) % 5;
-  const row = Math.floor([...board.querySelectorAll('.tile')].indexOf(current) / 5);
-  document.getElementById('answer').textContent = CATEGORIES[col].clues[row].a;
+  document.getElementById('answer').textContent = ROUNDS[round][currentCol].clues[currentRow].a;
   document.getElementById('revealBtn').style.display = 'none';
   document.getElementById('awardBtns').innerHTML = PLAYERS.map((n, i) =>
     `<button onclick="award(${i})">${n} +${currentValue}</button>`).join('') +
@@ -171,15 +208,22 @@ function reveal() {
   document.getElementById('award').classList.add('show');
 }
 function closeClue() {
-  if (current) current.classList.add('used');
+  if (current) { current.classList.add('used'); used[round].add(currentCol + ',' + currentRow); }
+  current = null;
   document.getElementById('modal').classList.remove('open');
-  if (!board.querySelector('.tile:not(.used)')) {
+  if (board.querySelector('.tile:not(.used)')) return;
+  if (round === 0 && used[1].size < 25) {
+    setTimeout(() => { alert('Round 1 complete! Time for the Double Round, where every clue is worth twice as much. 🔥'); round = 1; build(); }, 100);
+  } else {
     const top = Math.max(...scores);
     const winners = PLAYERS.filter((_, i) => scores[i] === top);
     setTimeout(() => alert('🏆 ' + winners.join(' & ') + ' win' + (winners.length > 1 ? '' : 's') + ' with ' + top + ' points! 🎉'), 100);
   }
 }
-function resetBoard() { if (confirm('Reset the board and scores?')) { scores = PLAYERS.map(() => 0); build(); drawScores(); } }
+function resetBoard() {
+  if (!confirm('Reset both rounds and all scores?')) return;
+  scores = PLAYERS.map(() => 0); used = [new Set(), new Set()]; round = 0; build(); drawScores();
+}
 build(); drawScores();
 </script>
 </body>

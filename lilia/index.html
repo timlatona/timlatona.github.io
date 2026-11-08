@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lilia's Birthday Trivia</title>
+<style>
+  :root { --bg:#1b0f3a; --tile:#5b2bb5; --tile-hover:#7a45e0; --used:#2a1a55; --gold:#ffd166; --text:#fff; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+         font-family:system-ui,-apple-system,"Segoe UI",sans-serif; padding:16px; }
+  h1 { text-align:center; color:var(--gold); margin:8px 0 4px; font-size:clamp(1.6rem,5vw,3rem); letter-spacing:1px; }
+  .sub { text-align:center; opacity:.8; margin:0 0 16px; }
+  .board { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; max-width:1100px; margin:0 auto; }
+  .cat { background:var(--tile); border-radius:6px; padding:12px 6px; text-align:center; font-weight:800;
+         text-transform:uppercase; font-size:clamp(.6rem,1.8vw,1rem); display:flex; align-items:center; justify-content:center; min-height:64px; }
+  .tile { background:var(--tile); border:0; border-radius:6px; color:var(--gold); font-weight:800;
+          font-size:clamp(1rem,4vw,2.2rem); aspect-ratio:16/10; cursor:pointer; }
+  .tile:hover { background:var(--tile-hover); }
+  .tile.used { background:var(--used); color:transparent; cursor:default; }
+  .bar { text-align:center; margin-top:16px; }
+  .bar button { background:transparent; color:var(--text); border:1px solid #fff6; border-radius:6px; padding:8px 14px; cursor:pointer; }
+  #modal { position:fixed; inset:0; background:var(--tile); display:none; flex-direction:column;
+           align-items:center; justify-content:center; padding:24px; text-align:center; }
+  #modal.open { display:flex; }
+  #mcat { color:var(--gold); text-transform:uppercase; font-weight:700; letter-spacing:1px; }
+  #clue { font-size:clamp(1.4rem,5vw,3rem); font-weight:700; max-width:900px; margin:20px 0; }
+  #answer { font-size:clamp(1.1rem,3.5vw,2rem); color:var(--gold); min-height:1.5em; margin-bottom:24px; }
+  .scores { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-width:1100px; margin:16px auto 0; }
+  .player { background:var(--used); border-radius:8px; padding:10px; text-align:center; }
+  .player .n { font-weight:700; }
+  .player .s { color:var(--gold); font-size:clamp(1.3rem,4vw,2rem); font-weight:800; }
+  .player button { background:transparent; color:#fff9; border:1px solid #fff4; border-radius:4px; font-size:.75rem; cursor:pointer; }
+  #award { display:none; margin-bottom:12px; }
+  #award.show { display:block; }
+  #modal #award button { background:#fff; }
+  #modal button { font-size:1.1rem; padding:12px 24px; border-radius:8px; border:0; cursor:pointer; margin:4px;
+                  background:var(--gold); color:#1b0f3a; font-weight:700; }
+</style>
+</head>
+<body>
+<h1>🎂 Lilia's Birthday Trivia 🎉</h1>
+<p class="sub">Pick a category and a value</p>
+<div class="board" id="board"></div>
+<div class="scores" id="scores"></div>
+<div class="bar"><button onclick="resetBoard()">Reset board</button></div>
+
+<div id="modal">
+  <div id="mcat"></div>
+  <div id="clue"></div>
+  <div id="answer"></div>
+  <div id="award"><div style="margin-bottom:8px">Who got it?</div><span id="awardBtns"></span></div>
+  <div>
+    <button id="revealBtn" onclick="reveal()">Show answer</button>
+    <button onclick="closeClue()">Back to board</button>
+  </div>
+</div>
+
+<script>
+// ===== EDIT QUESTIONS HERE =====
+// Each category has 5 clues, from 100 (easiest) up to 500 (hardest).
+const CATEGORIES = [
+  { name: "Liliaformation", clues: [
+    { q: "Placeholder: Lilia's favorite color", a: "TBD" },
+    { q: "Placeholder: The city where Lilia was born", a: "TBD" },
+    { q: "Placeholder: Lilia's go-to snack", a: "TBD" },
+    { q: "Placeholder: Lilia's favorite movie", a: "TBD" },
+    { q: "Placeholder: A little-known fact about Lilia", a: "TBD" },
+  ]},
+  { name: "Volleyball Terms", clues: [
+    { q: "A serve that lands untouched for a point", a: "What is an ace?" },
+    { q: "The player who usually makes the second touch to set up attackers", a: "What is the setter?" },
+    { q: "The defensive specialist who wears a different-colored jersey", a: "What is the libero?" },
+    { q: "Stopping an attack at the net with your hands up", a: "What is a block?" },
+    { q: "Passing the ball with forearms together, usually on serve receive", a: "What is a dig / bump (forearm pass)?" },
+  ]},
+  { name: "Category 3", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Category 4", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+  { name: "Category 5", clues: [
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" }, { q: "Placeholder clue", a: "TBD" },
+    { q: "Placeholder clue", a: "TBD" },
+  ]},
+];
+const PLAYERS = ["Lilia", "Maeve", "Maisie", "Piper"];
+// ===============================
+
+const board = document.getElementById('board');
+let current = null, currentValue = 0;
+let scores = PLAYERS.map(() => 0);
+
+function drawScores() {
+  document.getElementById('scores').innerHTML = PLAYERS.map((n, i) =>
+    `<div class="player"><div class="n">${n}</div><div class="s">${scores[i]}</div>` +
+    `<button onclick="adjust(${i},-100)" title="Fix a mistake">−100</button></div>`).join('');
+}
+function adjust(i, pts) { scores[i] += pts; drawScores(); }
+function award(i) { if (i >= 0) adjust(i, currentValue); closeClue(); }
+
+function build() {
+  board.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cat'; d.textContent = c.name; board.appendChild(d);
+  });
+  for (let row = 0; row < 5; row++) {
+    CATEGORIES.forEach((c, col) => {
+      const b = document.createElement('button');
+      b.className = 'tile'; b.textContent = (row + 1) * 100;
+      b.onclick = () => openClue(col, row, b);
+      board.appendChild(b);
+    });
+  }
+}
+function openClue(col, row, btn) {
+  if (btn.classList.contains('used')) return;
+  current = btn; currentValue = (row + 1) * 100;
+  document.getElementById('award').classList.remove('show');
+  const c = CATEGORIES[col];
+  document.getElementById('mcat').textContent = c.name + ' · ' + (row + 1) * 100;
+  document.getElementById('clue').textContent = c.clues[row].q;
+  document.getElementById('answer').textContent = '';
+  document.getElementById('revealBtn').style.display = '';
+  document.getElementById('modal').classList.add('open');
+}
+function reveal() {
+  const col = [...board.querySelectorAll('.tile')].indexOf(current) % 5;
+  const row = Math.floor([...board.querySelectorAll('.tile')].indexOf(current) / 5);
+  document.getElementById('answer').textContent = CATEGORIES[col].clues[row].a;
+  document.getElementById('revealBtn').style.display = 'none';
+  document.getElementById('awardBtns').innerHTML = PLAYERS.map((n, i) =>
+    `<button onclick="award(${i})">${n} +${currentValue}</button>`).join('') +
+    `<button onclick="award(-1)">Nobody</button>`;
+  document.getElementById('award').classList.add('show');
+}
+function closeClue() {
+  if (current) current.classList.add('used');
+  document.getElementById('modal').classList.remove('open');
+  if (!board.querySelector('.tile:not(.used)')) {
+    const top = Math.max(...scores);
+    const winners = PLAYERS.filter((_, i) => scores[i] === top);
+    setTimeout(() => alert('🏆 ' + winners.join(' & ') + ' win' + (winners.length > 1 ? '' : 's') + ' with ' + top + ' points! 🎉'), 100);
+  }
+}
+function resetBoard() { if (confirm('Reset the board and scores?')) { scores = PLAYERS.map(() => 0); build(); drawScores(); } }
+build(); drawScores();
+</script>
+</body>
+</html>

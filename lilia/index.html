@@ -164,14 +164,26 @@ const ROUNDS = [CATEGORIES, ROUND2];
 let round = 0, current = null, currentCol = 0, currentRow = 0, currentValue = 0;
 let scores = PLAYERS.map(() => 0);
 let used = [new Set(), new Set()];   // tiles already played, per round
+const SAVE_KEY = 'lilia-trivia';
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ scores, round, used: used.map(u => [...u]) })); } catch (e) {}
+}
+try {
+  const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+  if (d && d.scores && d.scores.length === PLAYERS.length) { scores = d.scores; round = d.round || 0; used = d.used.map(u => new Set(u)); }
+} catch (e) {}
 const value = row => (row + 1) * 100 * (round + 1);
 
 function drawScores() {
   document.getElementById('scores').innerHTML = PLAYERS.map((n, i) =>
-    `<div class="player"><div class="n">${n}</div><div class="s">${scores[i]}</div>` +
+    `<div class="player"><div class="n">${n}</div><div class="s" onclick="setScore(${i})" title="Click to type a score" style="cursor:pointer">${scores[i]}</div>` +
     `<button onclick="adjust(${i},-100)" title="Fix a mistake">−100</button></div>`).join('');
 }
-function adjust(i, pts) { scores[i] += pts; drawScores(); }
+function adjust(i, pts) { scores[i] += pts; drawScores(); save(); }
+function setScore(i) {
+  const v = prompt('Set ' + PLAYERS[i] + "'s score:", scores[i]);
+  if (v !== null && v.trim() !== '' && !isNaN(v)) { scores[i] = Math.round(Number(v)); drawScores(); save(); }
+}
 function award(i) { if (i >= 0) adjust(i, currentValue); closeClue(); }
 
 function build() {
@@ -194,7 +206,7 @@ function build() {
     (round ? 'Double Round · Points are doubled!' : 'Round 1 · Pick a category and a value');
   document.getElementById('roundBtn').textContent = round ? '← Back to Round 1' : 'Go to Double Round →';
 }
-function switchRound() { round = 1 - round; build(); }
+function switchRound() { round = 1 - round; build(); save(); }
 function openClue(col, row, btn) {
   if (btn.classList.contains('used')) return;
   current = btn; currentCol = col; currentRow = row; currentValue = value(row);
@@ -218,12 +230,12 @@ function reveal() {
   document.getElementById('award').classList.add('show');
 }
 function closeClue() {
-  if (current) { current.classList.add('used'); used[round].add(currentCol + ',' + currentRow); }
+  if (current) { current.classList.add('used'); used[round].add(currentCol + ',' + currentRow); save(); }
   current = null;
   document.getElementById('modal').classList.remove('open');
   if (board.querySelector('.tile:not(.used)')) return;
   if (round === 0 && used[1].size < 25) {
-    setTimeout(() => { alert('Round 1 complete! Time for the Double Round, where every clue is worth twice as much. 🔥'); round = 1; build(); }, 100);
+    setTimeout(() => { alert('Round 1 complete! Time for the Double Round, where every clue is worth twice as much. 🔥'); round = 1; build(); save(); }, 100);
   } else {
     const top = Math.max(...scores);
     const winners = PLAYERS.filter((_, i) => scores[i] === top);
@@ -232,7 +244,7 @@ function closeClue() {
 }
 function resetBoard() {
   if (!confirm('Reset both rounds and all scores?')) return;
-  scores = PLAYERS.map(() => 0); used = [new Set(), new Set()]; round = 0; build(); drawScores();
+  scores = PLAYERS.map(() => 0); used = [new Set(), new Set()]; round = 0; build(); drawScores(); save();
 }
 build(); drawScores();
 </script>

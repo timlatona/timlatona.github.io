@@ -157,14 +157,16 @@ const ROUND2 = [
 ];
 
 const PLAYERS = ["Lilia", "Maeve", "Maisie", "Piper"];
+// Scores carried over from Round 1 (same order as PLAYERS). The game starts in the Double Round.
+const START_SCORES = [1200, 2100, 1400, 2800];
 // ===============================
 
 const board = document.getElementById('board');
 const ROUNDS = [CATEGORIES, ROUND2];
-let round = 0, current = null, currentCol = 0, currentRow = 0, currentValue = 0;
-let scores = PLAYERS.map(() => 0);
+let round = 1, current = null, currentCol = 0, currentRow = 0, currentValue = 0;
+let scores = START_SCORES.slice();
 let used = [new Set(), new Set()];   // tiles already played, per round
-const SAVE_KEY = 'lilia-trivia';
+const SAVE_KEY = 'lilia-trivia-double';
 function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ scores, round, used: used.map(u => [...u]) })); } catch (e) {}
 }
@@ -243,8 +245,8 @@ function closeClue() {
   }
 }
 function resetBoard() {
-  if (!confirm('Reset both rounds and all scores?')) return;
-  scores = PLAYERS.map(() => 0); used = [new Set(), new Set()]; round = 0; build(); drawScores(); save();
+  if (!confirm('Restart the Double Round with the Round 1 scores?')) return;
+  scores = START_SCORES.slice(); used = [new Set(), new Set()]; round = 1; build(); drawScores(); save();
 }
 build(); drawScores();
 </script>

@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lilia's Wish List</title>
+<style>
+  :root {
+    --bg: #faf6ef;
+    --surface: #ffffff;
+    --surface-2: #f3ece0;
+    --ink: #2b2320;
+    --muted: #75685d;
+    --line: #e4d9c8;
+    --accent: #b3261e;
+    --accent-ink: #ffffff;
+    --green: #2f6b4f;
+    --green-soft: #e3f0e8;
+    --gold: #b7791f;
+    --shadow: 0 1px 2px rgba(43,35,32,.06), 0 6px 20px rgba(43,35,32,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17130f;
+      --surface: #221c17;
+      --surface-2: #2c251f;
+      --ink: #f3ece0;
+      --muted: #b3a597;
+      --line: #3a3129;
+      --accent: #e0574b;
+      --accent-ink: #1b0f0c;
+      --green: #7cc59d;
+      --green-soft: #1f3329;
+      --gold: #e3b45a;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.4;
+  }
+  [hidden] { display: none !important; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+
+  .top {
+    max-width: 1100px; margin: 0 auto; padding: 20px 16px 8px;
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px;
+  }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.7rem, 6vw, 2.6rem); margin: 0; letter-spacing: .01em; }
+  h1 .star { color: var(--gold); }
+  .who { font-size: .9rem; color: var(--muted); }
+  .link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 48px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+  .center { max-width: 460px; margin: 40px auto; text-align: center; }
+  .center p { margin: 0 0 16px; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .err { color: var(--accent); font-size: .9rem; min-height: 1.2em; margin: 12px 0 0 !important; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+    padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: .95rem; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.small { padding: 5px 12px; font-size: .85rem; }
+  .btn.green { background: var(--green); border-color: var(--green); color: var(--bg); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .google { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 1rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 8px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: .9rem; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+  .toolbar .spacer { flex: 1; }
+  .intro { color: var(--muted); font-size: .92rem; margin: 6px 0 16px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column; box-shadow: var(--shadow); min-width: 0;
+  }
+  .card.taken { opacity: .6; }
+  .card.mine { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), var(--shadow); }
+  .pic { aspect-ratio: 4 / 3; background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
+  .pic img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+  .pic.none { aspect-ratio: auto; height: 64px; }
+  .pic .ph { font-size: 1.8rem; opacity: .7; }
+  .body { padding: 12px 14px 4px; flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .tag.fav { color: var(--gold); }
+  .card h3 { margin: 2px 0 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+  .price { font-weight: 700; }
+  .notes { color: var(--muted); font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .view { align-self: flex-start; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: .92rem; }
+  .foot { padding: 10px 14px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .status { font-size: .9rem; font-weight: 700; margin-right: auto; }
+  .status.mine { color: var(--green); }
+  .status.taken { color: var(--muted); }
+  .owner { border-top: 1px dashed var(--line); padding: 8px 14px 12px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  #accessPanel { margin-top: 32px; }
+  #accessPanel h2 { margin: 0 0 4px; font-size: 1.1rem; }
+  .row { display: flex; gap: 8px; margin: 12px 0; }
+  .row input { flex: 1; min-width: 0; }
+  input[type=email], input[type=url], input:not([type]), select, textarea {
+    border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; width: 100%;
+  }
+  .access { list-style: none; margin: 0; padding: 0; }
+  .access li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+
+  dialog {
+    border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink);
+    width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  dialog::backdrop { background: rgba(20,14,10,.5); }
+  dialog form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  dialog h2 { margin: 0; font-family: Georgia, serif; }
+  dialog label { display: block; font-weight: 600; font-size: .92rem; }
+  dialog label > input, dialog label > select, dialog label > textarea { display: block; margin-top: 4px; }
+  dialog label .muted { font-weight: 400; }
+  dialog .check { display: flex; align-items: center; gap: 8px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1><span class="star">✦</span> Lilia's Wish List</h1>
+  <div id="who" class="who" hidden><span id="whoEmail"></span> · <button id="signOut" class="link" type="button">Sign out</button></div>
+</header>
+
+<main>
+  <section id="loading" class="center muted">Loading…</section>
+
+  <section id="signedOut" class="panel center" hidden>
+    <p>Sign in to see Lilia's list and mark what you're getting.</p>
+    <button id="signIn" class="btn google" type="button">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="signInErr" class="err" role="alert"></p>
+  </section>
+
+  <section id="denied" class="panel center" hidden>
+    <p>You're signed in as <b id="deniedEmail"></b>, but that email isn't on the list yet.</p>
+    <p class="muted">Ask Lilia or Tim to add it, then reload this page.</p>
+  </section>
+
+  <section id="list" hidden>
+    <div class="toolbar">
+      <div class="chips" id="chips" role="group" aria-label="Show items for"></div>
+      <label class="toggle" id="hideTakenWrap"><input type="checkbox" id="hideTaken"> Hide taken</label>
+      <span class="spacer"></span>
+      <button id="addBtn" class="btn primary" type="button" hidden>+ Add item</button>
+    </div>
+    <p id="intro" class="intro"></p>
+    <div id="items" class="grid"></div>
+    <p id="empty" class="empty" hidden></p>
+
+    <section id="accessPanel" class="panel" hidden>
+      <h2>Who can see the list</h2>
+      <p class="muted">Add the email each person uses to sign in with Google. Lilia and Tim always have access.</p>
+      <form id="accessForm" class="row">
+        <input type="email" id="accessEmail" placeholder="name@gmail.com" required autocomplete="off" autocapitalize="off">
+        <button class="btn" type="submit">Add</button>
+      </form>
+      <ul id="accessList" class="access"></ul>
+    </section>
+  </section>
+</main>
+
+<dialog id="editDlg">
+  <form id="editForm">
+    <h2 id="editHeading">Add item</h2>
+    <label>What is it?
+      <input name="title" required maxlength="120" autocomplete="off">
+    </label>
+    <label>Link <span class="muted">(where to buy it)</span>
+      <input name="url" type="url" placeholder="https://…" autocomplete="off" autocapitalize="off">
+    </label>
+    <div class="row2">
+      <label>Price
+        <input name="price" maxlength="20" placeholder="$25" autocomplete="off">
+      </label>
+      <label>For
+        <select name="occasion">
+          <option value="christmas">Christmas</option>
+          <option value="birthday">Birthday</option>
+          <option value="anytime">Anytime</option>
+        </select>
+      </label>
+    </div>
+    <label>Picture link <span class="muted">(optional)</span>
+      <input name="image" type="url" placeholder="https://…" autocomplete="off" autocapitalize="off">
+    </label>
+    <label>Notes <span class="muted">(size, color, anything else)</span>
+      <textarea name="notes" rows="2" maxlength="400"></textarea>
+    </label>
+    <label class="check"><input type="checkbox" name="top"> I really, really want this one</label>
+    <div class="actions">
+      <button type="button" class="btn" id="editCancel">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut }
+  from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getDatabase, ref, onValue, push, set, update, remove, runTransaction, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+
+// Public web config. Access is controlled by the database rules, not by keeping this secret.
+const app = initializeApp({
+  apiKey: 'AIzaSyDb6TIqn7Z8h9vnzL5helNfAD6GfZ5TDDs',
+  authDomain: 'buzr-71cd8.firebaseapp.com',
+  databaseURL: 'https://buzr-71cd8-default-rtdb.firebaseio.com',
+  projectId: 'buzr-71cd8',
+  storageBucket: 'buzr-71cd8.firebasestorage.app',
+  messagingSenderId: '977001661603',
+  appId: '1:977001661603:web:1f33de82dac9f63516eb16',
+});
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// Must match the owner emails in the database rules.
+const OWNERS = ['lilialatona@gmail.com', 'latona@gmail.com'];
+// The list's owner never sees claims, so gifts stay a surprise.
+const SURPRISE_FOR = 'lilialatona@gmail.com';
+const OCCASIONS = { all: 'All', christmas: 'Christmas', birthday: 'Birthday', anytime: 'Anytime' };
+
+const $ = (id) => document.getElementById(id);
+const views = ['loading', 'signedOut', 'denied', 'list'];
+function show(view) { for (const v of views) $(v).hidden = v !== view; }
+
+function store(key, value) {
+  try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch (e) { return null; }
+}
+
+let me = null;            // { uid, email, name, owner, surprise }
+let items = {};
+let filter = store('wishlist.filter') || 'all';
+let unsubs = [];
+
+// ---------- auth ----------
+
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
+
+$('signIn').addEventListener('click', async () => {
+  $('signInErr').textContent = '';
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-environment') {
+      return signInWithRedirect(auth, provider);
+    }
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    $('signInErr').textContent = e.code === 'auth/unauthorized-domain'
+      ? `Sign-in isn't switched on for ${location.hostname} yet. Add it in Firebase under Authentication → Settings → Authorized domains.`
+      : `Sign-in didn't work (${e.code || e.message}). Try again?`;
+  }
+});
+$('signOut').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  unsubs.forEach((u) => u()); unsubs = [];
+  items = {};
+  if (!user) {
+    me = null;
+    $('who').hidden = true;
+    return show('signedOut');
+  }
+  const email = (user.email || '').toLowerCase();
+  me = {
+    uid: user.uid,
+    email,
+    name: (user.displayName || email).split(' ')[0],
+    owner: OWNERS.includes(email),
+    surprise: email === SURPRISE_FOR,
+  };
+  $('whoEmail').textContent = email;
+  $('who').hidden = false;
+  show('loading');
+
+  unsubs.push(onValue(ref(db, 'items'), (snap) => {
+    items = snap.val() || {};
+    render();
+    show('list');
+  }, () => {
+    $('deniedEmail').textContent = email;
+    show('denied');
+  }));
+
+  if (me.owner) {
+    unsubs.push(onValue(ref(db, 'access/emails'), (snap) => renderAccess(snap.val() || {})));
+  }
+  setupChrome();
+});
+
+// ---------- list ----------
+
+function setupChrome() {
+  $('addBtn').hidden = !me.owner;
+  $('accessPanel').hidden = !me.owner;
+  $('hideTakenWrap').hidden = me.surprise;
+  $('hideTaken').checked = store('wishlist.hideTaken') === '1';
+  $('intro').textContent = me.surprise
+    ? "Add things you'd like. You won't see who's getting what. It's a surprise!"
+    : "Tap “I'll get this” so nobody buys the same thing twice. Lilia can't see what's been taken.";
+
+  const chips = $('chips');
+  chips.replaceChildren();
+  for (const [key, label] of Object.entries(OCCASIONS)) {
+    const b = el('button', { className: 'chip', type: 'button', textContent: label });
+    b.setAttribute('aria-pressed', String(key === filter));
+    b.addEventListener('click', () => {
+      filter = key; store('wishlist.filter', key);
+      [...chips.children].forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+      render();
+    });
+    chips.append(b);
+  }
+}
+
+$('hideTaken').addEventListener('change', (e) => { store('wishlist.hideTaken', e.target.checked ? '1' : '0'); render(); });
+
+function el(tag, props = {}, ...kids) {
+  const n = Object.assign(document.createElement(tag), props);
+  n.append(...kids.filter((k) => k != null && k !== false));
+  return n;
+}
+
+function safeUrl(u) {
+  try { const x = new URL(u); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : null; } catch (e) { return null; }
+}
+
+function render() {
+  if (!me) return;
+  const showClaims = !me.surprise;
+  const hideTaken = showClaims && $('hideTaken').checked;
+
+  const list = Object.entries(items)
+    .map(([id, it]) => ({ id, ...it }))
+    .filter((it) => it.title)
+    .filter((it) => filter === 'all' || it.occasion === filter)
+    .filter((it) => !(hideTaken && it.claim && it.claim.uid !== me.uid))
+    .sort((a, b) => {
+      if (showClaims) {
+        const ta = a.claim && a.claim.uid !== me.uid ? 1 : 0;
+        const tb = b.claim && b.claim.uid !== me.uid ? 1 : 0;
+        if (ta !== tb) return ta - tb;
+      }
+      if (!!a.top !== !!b.top) return a.top ? -1 : 1;
+      return (b.created || 0) - (a.created || 0);
+    });
+
+  $('items').replaceChildren(...list.map((it) => card(it, showClaims)));
+
+  const total = Object.keys(items).length;
+  $('empty').hidden = list.length > 0;
+  $('empty').textContent = total === 0
+    ? (me.owner ? 'Nothing here yet. Tap “+ Add item” to start the list.' : "Lilia hasn't added anything yet. Check back soon!")
+    : 'Nothing to show for this filter.';
+}
+
+function card(it, showClaims) {
+  const mine = showClaims && it.claim && it.claim.uid === me.uid;
+  const taken = showClaims && it.claim && !mine;
+
+  const img = safeUrl(it.image);
+  const pic = el('div', { className: 'pic' });
+  const placeholder = () => { pic.classList.add('none'); pic.replaceChildren(el('span', { className: 'ph', textContent: '🎁' })); };
+  if (img) {
+    const i = el('img', { src: img, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' });
+    i.addEventListener('error', placeholder);
+    pic.append(i);
+  } else placeholder();
+
+  const url = safeUrl(it.url);
+  const body = el('div', { className: 'body' },
+    el('div', { className: 'tags' },
+      it.top ? el('span', { className: 'tag fav', textContent: '★ Really wants' }) : null,
+      OCCASIONS[it.occasion] ? el('span', { className: 'tag', textContent: OCCASIONS[it.occasion] }) : null),
+    el('h3', { textContent: it.title }),
+    it.price ? el('div', { className: 'price', textContent: it.price }) : null,
+    it.notes ? el('div', { className: 'notes', textContent: it.notes }) : null,
+    url ? el('a', { className: 'view', href: url, target: '_blank', rel: 'noopener noreferrer', textContent: 'View item ↗' }) : null);
+
+  const node = el('article', { className: 'card' + (mine ? ' mine' : '') + (taken ? ' taken' : '') }, pic, body);
+  if (showClaims) node.append(claimFoot(it, mine, taken));
+  if (me.owner) node.append(ownerFoot(it));
+  return node;
+}
+
+function claimFoot(it, mine, taken) {
+  const foot = el('div', { className: 'foot' });
+  const claimRef = ref(db, `items/${it.id}/claim`);
+  if (mine) {
+    const bought = it.claim.status === 'bought';
+    foot.append(el('span', { className: 'status mine', textContent: bought ? '✓ You bought this' : "You're getting this" }));
+    if (!bought) foot.append(btn('Mark bought', 'small green', () => update(claimRef, { status: 'bought' })));
+    foot.append(btn('Undo', 'small', () => remove(claimRef)));
+  } else if (taken) {
+    foot.append(el('span', { className: 'status taken', textContent: 'Taken' }));
+    if (me.owner) foot.append(btn('Clear', 'small', () => {
+      if (confirm(`Clear the claim on “${it.title}”? Whoever took it won't be told.`)) return remove(claimRef);
+    }));
+  } else {
+    foot.append(btn("I'll get this", 'primary', () => claim(it)));
+  }
+  return foot;
+}
+
+async function claim(it) {
+  const res = await runTransaction(ref(db, `items/${it.id}/claim`), (cur) => {
+    if (cur && cur.uid !== me.uid) return; // someone else got there first
+    return { uid: me.uid, name: me.name, status: 'planning', at: Date.now() };
+  });
+  if (!res.committed) alert('Someone else just took this one.');
+}
+
+function ownerFoot(it) {
+  return el('div', { className: 'owner' },
+    btn('Edit', 'small', () => openEditor(it)),
+    btn('Delete', 'small', () => {
+      if (confirm(`Delete “${it.title}” from the list?`)) return remove(ref(db, `items/${it.id}`));
+    }));
+}
+
+function btn(label, cls, onClick) {
+  const b = el('button', { type: 'button', className: 'btn ' + cls, textContent: label });
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    try { await onClick(); } catch (e) { alert(`That didn't save (${e.code || e.message}).`); }
+    finally { b.disabled = false; }
+  });
+  return b;
+}
+
+// ---------- add / edit ----------
+
+const dlg = $('editDlg');
+const form = $('editForm');
+const F = form.elements;
+let editingId = null;
+
+function openEditor(it) {
+  editingId = it ? it.id : null;
+  $('editHeading').textContent = it ? 'Edit item' : 'Add item';
+  form.reset();
+  F.title.value = it?.title || '';
+  F.url.value = it?.url || '';
+  F.price.value = it?.price || '';
+  F.occasion.value = it?.occasion || (filter !== 'all' ? filter : 'christmas');
+  F.image.value = it?.image || '';
+  F.notes.value = it?.notes || '';
+  F.top.checked = !!it?.top;
+  dlg.showModal();
+  F.title.focus();
+}
+
+$('addBtn').addEventListener('click', () => openEditor(null));
+$('editCancel').addEventListener('click', () => dlg.close());
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = {
+    title: F.title.value.trim(),
+    url: F.url.value.trim(),
+    price: F.price.value.trim(),
+    occasion: F.occasion.value,
+    image: F.image.value.trim(),
+    notes: F.notes.value.trim(),
+    top: F.top.checked,
+  };
+  if (!data.title) return;
+  const save = form.querySelector('[type=submit]');
+  save.disabled = true;
+  try {
+    if (editingId) await update(ref(db, `items/${editingId}`), data);
+    else await set(push(ref(db, 'items')), { ...data, created: serverTimestamp() });
+    dlg.close();
+  } catch (err) {
+    alert(`That didn't save (${err.code || err.message}).`);
+  } finally {
+    save.disabled = false;
+  }
+});
+
+// ---------- who can see the list ----------
+
+const encodeEmail = (e) => e.toLowerCase().replaceAll('.', ',');
+const decodeEmail = (k) => k.replaceAll(',', '.');
+
+function renderAccess(emails) {
+  const keys = Object.keys(emails).filter((k) => emails[k]).sort();
+  $('accessList').replaceChildren(...(keys.length ? keys.map((k) => el('li', {},
+    el('span', { textContent: decodeEmail(k) }),
+    btn('Remove', 'small', () => {
+      if (confirm(`Remove ${decodeEmail(k)}? They won't be able to see the list.`)) return remove(ref(db, `access/emails/${k}`));
+    }))) : [el('li', { className: 'muted', textContent: 'Nobody added yet.' })]));
+}
+
+$('accessForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('accessEmail');
+  const email = input.value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || /[#$\[\]\/]/.test(email)) return input.reportValidity();
+  try { await set(ref(db, `access/emails/${encodeEmail(email)}`), true); input.value = ''; }
+  catch (err) { alert(`That didn't save (${err.code || err.message}).`); }
+});
+</script>
+</body>
+</html>

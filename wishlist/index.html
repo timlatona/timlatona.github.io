@@ -699,12 +699,23 @@ provider.setCustomParameters({ prompt: 'select_account' });
 
 $('signIn').addEventListener('click', async () => {
   $('signInErr').textContent = '';
+  const t0 = Date.now();
+  const secs = () => Math.round((Date.now() - t0) / 1000);
   try {
     await signInWithPopup(auth, provider);
+    snaplog(`sign-in ok after ${secs()}s`);
   } catch (e) {
+    snaplog(`sign-in failed after ${secs()}s: ${e.code || e.message}`);
     // No redirect fallback on purpose: redirect sign-in breaks on phones because the
     // sign-in helper lives on a different domain (firebaseapp.com) than this page.
-    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    if (e.code === 'auth/cancelled-popup-request') return;
+    if (e.code === 'auth/popup-closed-by-user') {
+      // A quick close is someone changing their mind. A slow one usually means the browser
+      // stopped the Google window from handing the sign-in back to this page.
+      if (secs() < 8) return;
+      $('signInErr').textContent = "The Google window closed before sign-in finished. If you did finish signing in, your browser is likely blocking it: try Chrome, or in Safari turn off Settings → Privacy → Prevent cross-site tracking, then try again.";
+      return;
+    }
     const blocked = e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-environment';
     $('signInErr').textContent = blocked
       ? "Your browser blocked the Google sign-in window. Allow pop-ups for this site, or open this page in Safari or Chrome, then try again."

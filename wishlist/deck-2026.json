@@ -1,0 +1,44 @@
+{
+  "id": "deck2026",
+  "profile": "Tops & tees: S (tanks S or M)\nHoodies: XS if oversized, S if not\nSweaters & pajamas: XS or S\nShoes: Women's 6.5\nPhone: iPhone 15\nClothes colors: maroon, navy & darker blues, grey, white, light pink, brown\nPatterns: stripes, polka dots, sometimes floral\nRoom colors: lots of color, mainly blues, reds and pinks\nCandle scents: vanilla, fruity, salty/fresh",
+  "items": [
+    { "category": "room", "idea": true, "top": true, "title": "Fun pillows and blankets", "image": "pillows-blankets", "notes": "Blues, reds and pinks" },
+    { "category": "room", "idea": true, "top": true, "title": "Unique wall decor", "image": "wall-decor" },
+    { "category": "room", "idea": true, "title": "Trinket dishes and trays", "image": "trinket-dishes" },
+    { "category": "room", "idea": true, "title": "Posters", "image": "posters" },
+    { "category": "room", "idea": true, "title": "Silk pillowcases", "image": "silk-pillowcase" },
+    { "category": "room", "idea": true, "title": "Unique frames", "image": "frames" },
+    { "category": "room", "idea": true, "title": "Rugs", "image": "rugs" },
+    { "category": "room", "idea": true, "title": "Candles", "notes": "Vanilla, fruity, or salty/fresh scents" },
+
+    { "category": "beauty", "idea": true, "top": true, "title": "Makeup", "image": "makeup", "notes": "Favorites: Tarte, Glossier, ILIA. Also elf, Summer Fridays, NYX" },
+    { "category": "beauty", "idea": true, "top": true, "title": "Body and shower care", "image": "body-care", "notes": "Favorites: Method, Frenshe, OUAI, Saltair. Also Sundae, Pacifica" },
+    { "category": "beauty", "idea": true, "top": true, "title": "Hair care", "image": "hair-care", "notes": "Favorites: OUAI, Bumble and bumble. Also Method, Not Your Mother's" },
+    { "category": "beauty", "idea": true, "top": true, "title": "Perfume", "image": "perfume", "notes": "Favorites: Glossier, OUAI (North Bondi). Also Diptyque, Phlur" },
+    { "category": "beauty", "top": true, "title": "No-air heated round brush", "image": "heated-brush" },
+    { "category": "beauty", "idea": true, "title": "Skin care", "image": "skin-care", "notes": "Byoma, Pacifica, Rhode" },
+    { "category": "beauty", "idea": true, "title": "Skin serums and masks", "image": "serums-masks" },
+    { "category": "beauty", "idea": true, "title": "Lip products", "image": "lip", "notes": "Rhode, Summer Fridays, Glossier" },
+    { "category": "beauty", "idea": true, "title": "Large claw clips", "image": "claw-clips" },
+
+    { "category": "clothes", "top": true, "title": "Adidas Spezials", "image": "spezials", "notes": "Women's 6.5. Maroon first choice, or brown or pink" },
+    { "category": "clothes", "idea": true, "top": true, "title": "Tanks", "image": "tanks", "notes": "Size S or M. Favorites: John Galt/Brandy, Hollister, Tillys. Also Target, AE, Garage" },
+    { "category": "clothes", "idea": true, "top": true, "title": "Hoodies", "image": "hoodies", "notes": "XS if oversized, S if not" },
+    { "category": "clothes", "idea": true, "top": true, "title": "Comfy pajamas", "image": "pajamas", "notes": "XS or S. Favorite: Aerie. Also AE, Target" },
+    { "category": "clothes", "idea": true, "title": "Graphic oversized or off-shoulder tees", "image": "graphic-tees", "notes": "Size S. In Print We Trust, Target, Hollister, John Galt/Brandy, Tillys" },
+    { "category": "clothes", "idea": true, "title": "Sweaters", "image": "sweaters", "notes": "XS or S. Aerie, AE, Target" },
+    { "category": "clothes", "idea": true, "title": "Nike Pros and socks", "image": "nike-pros" },
+
+    { "category": "giftcards", "idea": true, "top": true, "title": "Gift cards", "image": "gift-cards", "notes": "Favorites: Aerie, PacSun, Brandy Melville, TJ Maxx, Ulta, Hollister. Also Sephora, American Eagle, Target, Dick's, Amazon" },
+
+    { "category": "misc", "top": true, "title": "Natasha Ahmed sticker books", "image": "sticker-book", "notes": "If in stock, she really wants this" },
+    { "category": "misc", "idea": true, "top": true, "title": "Simple gold bracelets and necklaces", "image": "gold-jewelry" },
+    { "category": "misc", "idea": true, "top": true, "title": "Ceremonial-grade matcha", "image": "matcha" },
+    { "category": "misc", "top": true, "title": "Owala 34 oz water bottle", "image": "owala", "notes": "Blues, yellows or pinks" },
+    { "category": "misc", "idea": true, "title": "Journaling supplies", "image": "journaling", "notes": "Paper books, brush-tip markers, washi tape, sticker books" },
+    { "category": "misc", "idea": true, "title": "Jellycats", "image": "jellycats" },
+    { "category": "misc", "idea": true, "title": "Emily Lex watercolor books" },
+    { "category": "misc", "idea": true, "title": "Leather purse", "image": "leather-purse", "notes": "Maroon or brown" },
+    { "category": "misc", "idea": true, "title": "Phone case", "image": "phone-case", "notes": "iPhone 15" }
+  ]
+}

@@ -217,7 +217,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut }
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut }
   from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { getDatabase, ref, onValue, push, set, update, remove, runTransaction, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
@@ -264,11 +264,13 @@ $('signIn').addEventListener('click', async () => {
   try {
     await signInWithPopup(auth, provider);
   } catch (e) {
-    if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-environment') {
-      return signInWithRedirect(auth, provider);
-    }
+    // No redirect fallback on purpose: redirect sign-in breaks on phones because the
+    // sign-in helper lives on a different domain (firebaseapp.com) than this page.
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
-    $('signInErr').textContent = e.code === 'auth/unauthorized-domain'
+    const blocked = e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-environment';
+    $('signInErr').textContent = blocked
+      ? "Your browser blocked the Google sign-in window. Allow pop-ups for this site, or open this page in Safari or Chrome, then try again."
+      : e.code === 'auth/unauthorized-domain'
       ? `Sign-in isn't switched on for ${location.hostname} yet. Add it in Firebase under Authentication → Settings → Authorized domains.`
       : `Sign-in didn't work (${e.code || e.message}). Try again?`;
   }

@@ -80,6 +80,7 @@
   }
   .snow::after { content: ""; inset: 0; background-size: 300px 300px; animation-duration: 22s; opacity: .6; }
   @keyframes fall { to { transform: translateY(200px); } }
+  .hero.offscreen .snow, .hero.offscreen .snow::after { animation-play-state: paused; }
   @media (prefers-reduced-motion: reduce) { .snow, .snow::after { animation: none; } }
 
   .hero-inner { position: relative; max-width: 1100px; margin: 0 auto; }
@@ -278,7 +279,9 @@
     .center { padding: 22px 18px; }
 
     main { padding-bottom: 104px; }
-    .toolbar { gap: 8px; padding: 10px 16px; }
+    .toolbar { gap: 8px; padding: 10px 16px; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    dialog::backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .card { box-shadow: var(--shadow-sm); }
     .chip { padding: 7px 11px; font-size: .84rem; }
     .switch { font-size: .82rem; }
     .stats { margin: 2px 2px 12px; gap: 2px 10px; }
@@ -480,6 +483,12 @@ let items = {};
 let filter = store('wishlist.filter') || 'all';
 let unsubs = [];
 
+// Pause the snow once the header scrolls away.
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(([e]) => document.querySelector('.hero').classList.toggle('offscreen', !e.isIntersecting))
+    .observe(document.querySelector('.hero'));
+}
+
 // ---------- countdown ----------
 
 (function countdown() {
@@ -517,6 +526,9 @@ $('signIn').addEventListener('click', async () => {
 $('signOut').addEventListener('click', () => signOut(auth));
 
 onAuthStateChanged(auth, (user) => {
+  // Firebase can re-announce the same signed-in user (e.g. after a token refresh or when the
+  // tab wakes up). Re-subscribing would flash the loading view and throw the page back to the top.
+  if (user && me && user.uid === me.uid) return;
   unsubs.forEach((u) => u()); unsubs = [];
   items = {};
   if (!user) {
@@ -645,11 +657,15 @@ function render() {
     ? `${all.length} wish${all.length === 1 ? '' : 'es'} · ${open} still up for grabs`
     : `${all.length} wish${all.length === 1 ? '' : 'es'} on your list`;
 
+  const y = scrollY;
+  const firstPaint = !$('items').childElementCount;
   $('items').replaceChildren(...list.map((it, i) => {
     const c = card(it, showClaims);
-    c.style.animationDelay = `${Math.min(i, 12) * 30}ms`;
+    if (firstPaint) c.style.animationDelay = `${Math.min(i, 12) * 30}ms`;
+    else c.style.animation = 'none';
     return c;
   }));
+  if (Math.abs(scrollY - y) > 1) scrollTo(0, y);
 
   const total = all.length;
   $('empty').hidden = list.length > 0;

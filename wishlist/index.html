@@ -2,171 +2,317 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#7a1622">
 <title>Lilia's Wish List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #faf6ef;
+    --bg: #fbf7f2;
     --surface: #ffffff;
-    --surface-2: #f3ece0;
-    --ink: #2b2320;
-    --muted: #75685d;
-    --line: #e4d9c8;
-    --accent: #b3261e;
-    --accent-ink: #ffffff;
-    --green: #2f6b4f;
-    --green-soft: #e3f0e8;
-    --gold: #b7791f;
-    --shadow: 0 1px 2px rgba(43,35,32,.06), 0 6px 20px rgba(43,35,32,.06);
+    --surface-2: #f4ede4;
+    --ink: #2a1f1d;
+    --muted: #7a6b62;
+    --line: #ebe2d6;
+    --berry: #b4232f;
+    --berry-deep: #7a1622;
+    --pine: #1f5c45;
+    --pine-soft: #e4f1ea;
+    --gold: #c9973a;
+    --on-accent: #ffffff;
+    --hero-ink: #fff7ee;
+    --shadow-sm: 0 1px 2px rgba(42,31,29,.06);
+    --shadow: 0 1px 2px rgba(42,31,29,.05), 0 8px 24px -6px rgba(42,31,29,.12);
+    --shadow-lg: 0 2px 4px rgba(42,31,29,.06), 0 18px 40px -10px rgba(42,31,29,.22);
+    --radius: 18px;
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #17130f;
-      --surface: #221c17;
-      --surface-2: #2c251f;
-      --ink: #f3ece0;
-      --muted: #b3a597;
-      --line: #3a3129;
-      --accent: #e0574b;
-      --accent-ink: #1b0f0c;
-      --green: #7cc59d;
-      --green-soft: #1f3329;
-      --gold: #e3b45a;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+      --bg: #13100e;
+      --surface: #1e1915;
+      --surface-2: #29221c;
+      --ink: #f5ede3;
+      --muted: #b0a194;
+      --line: #342b24;
+      --berry: #e25563;
+      --berry-deep: #4a0f17;
+      --pine: #6fc49b;
+      --pine-soft: #17302a;
+      --gold: #e4b65c;
+      --on-accent: #1a0d0b;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -6px rgba(0,0,0,.5);
+      --shadow-lg: 0 2px 4px rgba(0,0,0,.3), 0 18px 40px -10px rgba(0,0,0,.6);
     }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.4;
-  }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
   [hidden] { display: none !important; }
   button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: inherit; }
 
-  .top {
-    max-width: 1100px; margin: 0 auto; padding: 20px 16px 8px;
-    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px;
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative; overflow: hidden; color: var(--hero-ink);
+    background:
+      radial-gradient(120% 140% at 0% 0%, #c43341 0%, transparent 55%),
+      radial-gradient(90% 120% at 100% 100%, #1f5c45 0%, transparent 60%),
+      linear-gradient(135deg, #8e1a27, #5b1019);
+    padding: max(20px, env(safe-area-inset-top)) 16px 30px;
   }
-  h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.7rem, 6vw, 2.6rem); margin: 0; letter-spacing: .01em; }
-  h1 .star { color: var(--gold); }
-  .who { font-size: .9rem; color: var(--muted); }
-  .link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .snow, .snow::after {
+    position: absolute; inset: -200px 0 0; pointer-events: none;
+    background-image:
+      radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,.75), transparent 60%),
+      radial-gradient(1.5px 1.5px at 90px 120px, rgba(255,255,255,.6), transparent 60%),
+      radial-gradient(2.5px 2.5px at 160px 60px, rgba(255,255,255,.55), transparent 60%),
+      radial-gradient(1.5px 1.5px at 60px 170px, rgba(255,255,255,.5), transparent 60%),
+      radial-gradient(2px 2px at 190px 190px, rgba(255,255,255,.6), transparent 60%);
+    background-size: 200px 200px;
+    animation: fall 14s linear infinite;
+    opacity: .7;
+  }
+  .snow::after { content: ""; inset: 0; background-size: 300px 300px; animation-duration: 22s; opacity: .6; }
+  @keyframes fall { to { transform: translateY(200px); } }
+  @media (prefers-reduced-motion: reduce) { .snow, .snow::after { animation: none; } }
 
-  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 48px; }
-  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
-  .center { max-width: 460px; margin: 40px auto; text-align: center; }
+  .hero-inner { position: relative; max-width: 1100px; margin: 0 auto; }
+  .topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 32px; }
+  .countdown {
+    display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 500;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 5px 12px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .who { font-size: .82rem; opacity: .85; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .who .email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who button { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; flex: none; }
+  h1 {
+    font-family: var(--display); font-weight: 700; letter-spacing: -.01em; line-height: 1.02;
+    font-size: clamp(2.4rem, 10vw, 4.6rem); margin: 22px 0 6px;
+  }
+  h1 em { font-style: italic; font-weight: 500; color: #ffd98a; }
+  .subtitle { margin: 0; font-size: 1rem; opacity: .85; max-width: 46ch; }
+
+  /* ---------- layout ---------- */
+  main { max-width: 1100px; margin: 0 auto; padding: 4px 16px 96px; position: relative; }
+  body:has(#list[hidden]) .hero { padding-bottom: 64px; }
+  .center { position: relative; margin-top: -40px !important; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+  .center { max-width: 440px; margin: 0 auto; text-align: center; }
   .center p { margin: 0 0 16px; }
+  .center h2 { font-family: var(--display); font-size: 1.5rem; margin: 6px 0 8px; }
   .muted { color: var(--muted); font-size: .9rem; }
-  .err { color: var(--accent); font-size: .9rem; min-height: 1.2em; margin: 12px 0 0 !important; }
+  .err { color: var(--berry); font-size: .9rem; min-height: 1.2em; margin: 14px 0 0 !important; }
+  .art { width: 96px; height: 96px; margin: 0 auto 4px; display: block; }
 
   .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
-    padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: .95rem; white-space: nowrap;
+    padding: 9px 18px; cursor: pointer; font-weight: 700; font-size: .92rem; white-space: nowrap;
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
   }
   .btn:hover { border-color: var(--muted); }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .btn.primary:hover { filter: brightness(1.08); }
-  .btn.small { padding: 5px 12px; font-size: .85rem; }
-  .btn.green { background: var(--green); border-color: var(--green); color: var(--bg); }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--berry); color: var(--on-accent); border-color: transparent; box-shadow: 0 6px 16px -6px rgba(180,35,47,.6); }
+  .btn.primary:hover { filter: brightness(1.07); }
+  .btn.green { background: var(--pine); color: var(--on-accent); border-color: transparent; }
+  .btn.small { padding: 6px 13px; font-size: .82rem; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--ink); background: var(--surface-2); }
+  .btn.block { width: 100%; padding: 11px 18px; font-size: .95rem; }
   .btn:disabled { opacity: .5; cursor: default; }
-  .google { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 1rem; }
+  .google { padding: 12px 22px; font-size: 1rem; box-shadow: var(--shadow-sm); }
 
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 8px 0 6px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: .9rem; }
-  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; color: var(--muted); cursor: pointer; }
-  .toolbar .spacer { flex: 1; }
-  .intro { color: var(--muted); font-size: .92rem; margin: 6px 0 16px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
-  .card {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
-    display: flex; flex-direction: column; box-shadow: var(--shadow); min-width: 0;
+  /* ---------- toolbar ---------- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 5; margin: 0 -16px; padding: 12px 16px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
-  .card.taken { opacity: .6; }
-  .card.mine { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), var(--shadow); }
-  .pic { aspect-ratio: 4 / 3; background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
-  .pic img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
-  .pic.none { aspect-ratio: auto; height: 64px; }
-  .pic .ph { font-size: 1.8rem; opacity: .7; }
-  .body { padding: 12px 14px 4px; flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  .tag.fav { color: var(--gold); }
-  .card h3 { margin: 2px 0 0; font-size: 1.05rem; overflow-wrap: anywhere; }
-  .price { font-weight: 700; }
-  .notes { color: var(--muted); font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .view { align-self: flex-start; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: .92rem; }
-  .foot { padding: 10px 14px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .status { font-size: .9rem; font-weight: 700; margin-right: auto; }
-  .status.mine { color: var(--green); }
-  .status.taken { color: var(--muted); }
-  .owner { border-top: 1px dashed var(--line); padding: 8px 14px 12px; display: flex; gap: 8px; justify-content: flex-end; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; box-shadow: var(--shadow-sm); overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .seg::-webkit-scrollbar { display: none; }
+  .chip { border: 0; background: none; border-radius: 999px; padding: 6px 13px; cursor: pointer; font-size: .86rem; font-weight: 500; color: var(--muted); white-space: nowrap; transition: background .2s, color .2s; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .switch { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--muted); cursor: pointer; user-select: none; }
+  .switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s; }
+  .switch input:checked { background: var(--pine); }
+  .switch input:checked::after { transform: translateX(14px); }
+  .toolbar .spacer { flex: 1; }
 
-  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 6px 2px 18px; }
+  .stats .count { font-family: var(--display); font-size: 1.25rem; font-weight: 700; }
+  .stats .hint { color: var(--muted); font-size: .88rem; }
 
-  #accessPanel { margin-top: 32px; }
-  #accessPanel h2 { margin: 0 0 4px; font-size: 1.1rem; }
-  .row { display: flex; gap: 8px; margin: 12px 0; }
+  /* ---------- cards ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+  .card {
+    position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); min-width: 0;
+    transition: transform .2s ease, box-shadow .2s ease; animation: rise .35s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  @media (hover: hover) { .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); } }
+  .card.mine { border-color: var(--pine); box-shadow: 0 0 0 1px var(--pine), var(--shadow); }
+
+  .pic { position: relative; aspect-ratio: 1 / 1; background: #fff; overflow: hidden; }
+  .pic img { width: 100%; height: 100%; object-fit: contain; padding: 10px; transition: transform .4s ease; }
+  @media (hover: hover) { .card:hover .pic img { transform: scale(1.04); } }
+  .pic.none { aspect-ratio: 16 / 9; display: grid; place-items: center; text-align: center; }
+  .pic.none .emoji { font-size: 2.6rem; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,.15)); }
+  .pic.none .store { display: block; margin-top: 8px; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(42,31,29,.55); }
+  .g0 { background: linear-gradient(135deg, #fde2e4, #fad2c8); }
+  .g1 { background: linear-gradient(135deg, #e0efe6, #c9e4d6); }
+  .g2 { background: linear-gradient(135deg, #fbefd5, #f6dcae); }
+  .g3 { background: linear-gradient(135deg, #e6e3f7, #d3cdef); }
+  .g4 { background: linear-gradient(135deg, #dcecf6, #c6dff0); }
+
+  .ribbon {
+    position: absolute; top: 12px; left: 12px; z-index: 1;
+    background: var(--gold); color: #2a1f1d; font-size: .72rem; font-weight: 700; letter-spacing: .03em;
+    padding: 4px 10px; border-radius: 999px; box-shadow: 0 4px 10px -4px rgba(0,0,0,.35);
+  }
+  .pricetag {
+    position: absolute; bottom: 12px; right: 12px; z-index: 1;
+    background: rgba(255,255,255,.92); color: #2a1f1d; font-weight: 700; font-size: .88rem;
+    padding: 4px 11px; border-radius: 999px; box-shadow: 0 4px 12px -4px rgba(0,0,0,.3);
+  }
+  .card.taken .pic > :not(.stamp) { filter: grayscale(1) opacity(.55); }
+  .stamp {
+    position: absolute; inset: 0; display: grid; place-items: center; z-index: 2;
+  }
+  .stamp span {
+    font-family: var(--display); font-weight: 700; font-size: 1.3rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--berry); border: 3px solid var(--berry); border-radius: 10px; padding: 4px 14px;
+    transform: rotate(-10deg); background: rgba(255,255,255,.85);
+  }
+
+  .body { padding: 14px 16px 6px; flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .occasion { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .card h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.15rem; line-height: 1.2; overflow-wrap: anywhere; }
+  .notes { color: var(--muted); font-size: .88rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .view { align-self: flex-start; margin-top: 4px; color: var(--berry); font-weight: 700; font-size: .86rem; text-decoration: none; }
+  .view:hover { text-decoration: underline; }
+  .foot { padding: 10px 16px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .status { font-size: .88rem; font-weight: 700; flex: 1 1 100%; }
+  .status.mine { color: var(--pine); }
+  .status.taken { color: var(--muted); font-weight: 500; }
+  .mine-bar { display: flex; gap: 8px; flex: 1; }
+  .mine-bar .btn { flex: 1; }
+  .owner { display: flex; justify-content: flex-end; gap: 2px; padding: 0 8px 8px; margin-top: -4px; }
+
+  .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+  .empty .big { font-size: 3rem; display: block; margin-bottom: 8px; }
+
+  .fab {
+    position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+    padding: 14px 22px; font-size: 1rem; box-shadow: 0 12px 28px -8px rgba(180,35,47,.7);
+  }
+
+  /* skeleton */
+  .skel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); height: 340px; position: relative; overflow: hidden; }
+  .skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-2) 80%, transparent), transparent); animation: shimmer 1.3s infinite; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  /* access panel */
+  #accessPanel { margin-top: 40px; }
+  #accessPanel h2 { margin: 0 0 4px; font-family: var(--display); font-size: 1.3rem; }
+  .row { display: flex; gap: 8px; margin: 14px 0; }
   .row input { flex: 1; min-width: 0; }
   input[type=email], input[type=url], input:not([type]), select, textarea {
-    border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; width: 100%;
+    border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 12px; width: 100%;
+    transition: border-color .2s, box-shadow .2s;
   }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--berry); box-shadow: 0 0 0 3px color-mix(in srgb, var(--berry) 20%, transparent); }
   .access { list-style: none; margin: 0; padding: 0; }
-  .access li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+  .access li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 
+  /* dialog */
   dialog {
-    border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink);
-    width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    border: 0; border-radius: 22px; padding: 0; background: var(--surface); color: var(--ink);
+    width: min(520px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-shadow: 0 30px 80px rgba(0,0,0,.35);
   }
-  dialog::backdrop { background: rgba(20,14,10,.5); }
-  dialog form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-  dialog h2 { margin: 0; font-family: Georgia, serif; }
-  dialog label { display: block; font-weight: 600; font-size: .92rem; }
-  dialog label > input, dialog label > select, dialog label > textarea { display: block; margin-top: 4px; }
+  dialog[open] { animation: pop .22s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+  dialog::backdrop { background: rgba(20,12,10,.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  dialog h2 { margin: 0; font-family: var(--display); font-size: 1.6rem; }
+  dialog label { display: block; font-weight: 700; font-size: .88rem; }
   dialog label .muted { font-weight: 400; }
-  dialog .check { display: flex; align-items: center; gap: 8px; }
+  dialog label > input, dialog label > select, dialog label > textarea { display: block; margin-top: 6px; font-weight: 400; }
+  dialog .check { display: flex; align-items: center; gap: 10px; font-weight: 500; background: var(--surface-2); padding: 12px 14px; border-radius: 12px; cursor: pointer; }
+  dialog .check input { width: 18px; height: 18px; accent-color: var(--gold); margin: 0; }
+  .imgprev { display: none; margin-top: 8px; height: 96px; border-radius: 12px; background: #fff; border: 1px solid var(--line); overflow: hidden; }
+  .imgprev.show { display: block; }
+  .imgprev img { width: 100%; height: 100%; object-fit: contain; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+  .confetti { position: fixed; z-index: 50; pointer-events: none; width: 8px; height: 12px; border-radius: 2px; top: 0; left: 0; }
 </style>
 </head>
 <body>
 
-<header class="top">
-  <h1><span class="star">✦</span> Lilia's Wish List</h1>
-  <div id="who" class="who" hidden><span id="whoEmail"></span> · <button id="signOut" class="link" type="button">Sign out</button></div>
+<header class="hero">
+  <div class="snow" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <div class="topline">
+      <span class="countdown" id="countdown" hidden></span>
+      <div id="who" class="who" hidden><span class="email" id="whoEmail"></span><button id="signOut" type="button">Sign out</button></div>
+    </div>
+    <h1>Lilia's <em>wish list</em></h1>
+    <p class="subtitle" id="subtitle">Things she's hoping for, all in one place.</p>
+  </div>
 </header>
 
 <main>
-  <section id="loading" class="center muted">Loading…</section>
+  <section id="loading" aria-label="Loading">
+    <div class="toolbar" aria-hidden="true"></div>
+    <div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  </section>
 
   <section id="signedOut" class="panel center" hidden>
-    <p>Sign in to see Lilia's list and mark what you're getting.</p>
+    <svg class="art" viewBox="0 0 96 96" aria-hidden="true">
+      <rect x="14" y="40" width="68" height="46" rx="6" fill="#b4232f"/>
+      <rect x="10" y="28" width="76" height="16" rx="5" fill="#d33a47"/>
+      <rect x="43" y="28" width="10" height="58" fill="#c9973a"/>
+      <path d="M48 28c-6-14-24-16-22-4 1 6 12 6 22 4zm0 0c6-14 24-16 22-4-1 6-12 6-22 4z" fill="none" stroke="#c9973a" stroke-width="5" stroke-linejoin="round"/>
+    </svg>
+    <h2>Come on in</h2>
+    <p class="muted">Sign in to see Lilia's list and quietly mark what you're getting.</p>
     <button id="signIn" class="btn google" type="button">
-      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.200 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
       Sign in with Google
     </button>
     <p id="signInErr" class="err" role="alert"></p>
   </section>
 
   <section id="denied" class="panel center" hidden>
+    <svg class="art" viewBox="0 0 96 96" aria-hidden="true">
+      <circle cx="48" cy="48" r="36" fill="#f4ede4"/>
+      <rect x="30" y="44" width="36" height="28" rx="6" fill="#b4232f"/>
+      <path d="M37 44v-7a11 11 0 0 1 22 0v7" fill="none" stroke="#7a1622" stroke-width="6"/>
+    </svg>
+    <h2>Almost there</h2>
     <p>You're signed in as <b id="deniedEmail"></b>, but that email isn't on the list yet.</p>
     <p class="muted">Ask Lilia or Tim to add it, then reload this page.</p>
   </section>
 
   <section id="list" hidden>
     <div class="toolbar">
-      <div class="chips" id="chips" role="group" aria-label="Show items for"></div>
-      <label class="toggle" id="hideTakenWrap"><input type="checkbox" id="hideTaken"> Hide taken</label>
-      <span class="spacer"></span>
-      <button id="addBtn" class="btn primary" type="button" hidden>+ Add item</button>
+      <div class="seg" id="chips" role="group" aria-label="Show items for"></div>
+      <label class="switch" id="hideTakenWrap"><input type="checkbox" id="hideTaken"> Hide taken</label>
     </div>
-    <p id="intro" class="intro"></p>
+    <div class="stats"><span class="count" id="count"></span><span class="hint" id="intro"></span></div>
     <div id="items" class="grid"></div>
-    <p id="empty" class="empty" hidden></p>
+    <div id="empty" class="empty" hidden></div>
 
     <section id="accessPanel" class="panel" hidden>
       <h2>Who can see the list</h2>
@@ -180,11 +326,13 @@
   </section>
 </main>
 
+<button id="addBtn" class="btn primary fab" type="button" hidden>＋ Add a wish</button>
+
 <dialog id="editDlg">
   <form id="editForm">
-    <h2 id="editHeading">Add item</h2>
+    <h2 id="editHeading">Add a wish</h2>
     <label>What is it?
-      <input name="title" required maxlength="120" autocomplete="off">
+      <input name="title" required maxlength="120" autocomplete="off" placeholder="e.g. Stanley tumbler, 40 oz">
     </label>
     <label>Link <span class="muted">(where to buy it)</span>
       <input name="url" type="url" placeholder="https://…" autocomplete="off" autocapitalize="off">
@@ -201,15 +349,16 @@
         </select>
       </label>
     </div>
-    <label>Picture link <span class="muted">(optional)</span>
+    <label>Picture link <span class="muted">(long-press a product photo → Copy)</span>
       <input name="image" type="url" placeholder="https://…" autocomplete="off" autocapitalize="off">
+      <div class="imgprev" id="imgPrev"><img alt="" referrerpolicy="no-referrer"></div>
     </label>
     <label>Notes <span class="muted">(size, color, anything else)</span>
       <textarea name="notes" rows="2" maxlength="400"></textarea>
     </label>
-    <label class="check"><input type="checkbox" name="top"> I really, really want this one</label>
+    <label class="check"><input type="checkbox" name="top"> ★ I really, really want this one</label>
     <div class="actions">
-      <button type="button" class="btn" id="editCancel">Cancel</button>
+      <button type="button" class="btn ghost" id="editCancel">Cancel</button>
       <button type="submit" class="btn primary">Save</button>
     </div>
   </form>
@@ -244,6 +393,7 @@ const OCCASIONS = { all: 'All', christmas: 'Christmas', birthday: 'Birthday', an
 const $ = (id) => document.getElementById(id);
 const views = ['loading', 'signedOut', 'denied', 'list'];
 function show(view) { for (const v of views) $(v).hidden = v !== view; }
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function store(key, value) {
   try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch (e) { return null; }
@@ -253,6 +403,19 @@ let me = null;            // { uid, email, name, owner, surprise }
 let items = {};
 let filter = store('wishlist.filter') || 'all';
 let unsubs = [];
+
+// ---------- countdown ----------
+
+(function countdown() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let xmas = new Date(now.getFullYear(), 11, 25);
+  if (today > xmas) xmas = new Date(now.getFullYear() + 1, 11, 25);
+  const days = Math.round((xmas - today) / 864e5);
+  if (days > 75) return;
+  $('countdown').textContent = days === 0 ? '🎄 Merry Christmas!' : `🎄 ${days} day${days === 1 ? '' : 's'} until Christmas`;
+  $('countdown').hidden = false;
+})();
 
 // ---------- auth ----------
 
@@ -283,6 +446,8 @@ onAuthStateChanged(auth, (user) => {
   if (!user) {
     me = null;
     $('who').hidden = true;
+    $('addBtn').hidden = true;
+    $('subtitle').textContent = "Things she's hoping for, all in one place.";
     return show('signedOut');
   }
   const email = (user.email || '').toLowerCase();
@@ -303,6 +468,7 @@ onAuthStateChanged(auth, (user) => {
     show('list');
   }, () => {
     $('deniedEmail').textContent = email;
+    $('addBtn').hidden = true;
     show('denied');
   }));
 
@@ -319,9 +485,12 @@ function setupChrome() {
   $('accessPanel').hidden = !me.owner;
   $('hideTakenWrap').hidden = me.surprise;
   $('hideTaken').checked = store('wishlist.hideTaken') === '1';
+  $('subtitle').textContent = me.surprise
+    ? `Hi ${me.name}! Add anything you're hoping for.`
+    : `Hi ${me.name}! Pick something, and nobody else will buy it too.`;
   $('intro').textContent = me.surprise
-    ? "Add things you'd like. You won't see who's getting what. It's a surprise!"
-    : "Tap “I'll get this” so nobody buys the same thing twice. Lilia can't see what's been taken.";
+    ? "You won't see who's getting what. It's a surprise!"
+    : "Lilia can't see what's been taken.";
 
   const chips = $('chips');
   chips.replaceChildren();
@@ -348,15 +517,29 @@ function el(tag, props = {}, ...kids) {
 function safeUrl(u) {
   try { const x = new URL(u); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : null; } catch (e) { return null; }
 }
+function storeName(u) {
+  try { return new URL(u).hostname.replace(/^(www|shop|m)\./, ''); } catch (e) { return ''; }
+}
+function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
+
+const EMOJI = [
+  [/tumbler|cup|mug|bottle|stanley|owala/i, '🥤'], [/shoe|sneaker|boot|nike|adidas|ugg|crocs/i, '👟'],
+  [/makeup|lip|gloss|sephora|ulta|blush|mascara|skincare|serum|perfume/i, '💄'], [/book|novel/i, '📚'],
+  [/headphone|airpod|earbud|speaker|beats/i, '🎧'], [/hoodie|sweater|shirt|pants|leggings|lululemon|jacket|dress|top/i, '👕'],
+  [/bag|purse|backpack|tote/i, '👜'], [/gift card|giftcard/i, '💳'], [/game|switch|playstation|xbox|lego|puzzle/i, '🎮'],
+  [/necklace|ring|bracelet|earring|jewel/i, '💍'], [/candle/i, '🕯️'], [/phone|ipad|tablet|laptop|watch/i, '📱'],
+  [/camera/i, '📷'], [/blanket|pillow|plush|squish|stuffed/i, '🧸'], [/art|paint|marker|sketch/i, '🎨'],
+  [/volleyball|ball|sport/i, '🏐'], [/hair|brush|dyson|straightener|curl/i, '💇‍♀️'],
+];
+const emojiFor = (t) => (EMOJI.find(([re]) => re.test(t)) || [, '🎁'])[1];
 
 function render() {
   if (!me) return;
   const showClaims = !me.surprise;
   const hideTaken = showClaims && $('hideTaken').checked;
+  const all = Object.entries(items).map(([id, it]) => ({ id, ...it })).filter((it) => it.title);
 
-  const list = Object.entries(items)
-    .map(([id, it]) => ({ id, ...it }))
-    .filter((it) => it.title)
+  const list = all
     .filter((it) => filter === 'all' || it.occasion === filter)
     .filter((it) => !(hideTaken && it.claim && it.claim.uid !== me.uid))
     .sort((a, b) => {
@@ -369,37 +552,54 @@ function render() {
       return (b.created || 0) - (a.created || 0);
     });
 
-  $('items').replaceChildren(...list.map((it) => card(it, showClaims)));
+  const open = all.filter((it) => !it.claim).length;
+  $('count').textContent = showClaims
+    ? `${all.length} wish${all.length === 1 ? '' : 'es'} · ${open} still up for grabs`
+    : `${all.length} wish${all.length === 1 ? '' : 'es'} on your list`;
 
-  const total = Object.keys(items).length;
+  $('items').replaceChildren(...list.map((it, i) => {
+    const c = card(it, showClaims);
+    c.style.animationDelay = `${Math.min(i, 12) * 30}ms`;
+    return c;
+  }));
+
+  const total = all.length;
   $('empty').hidden = list.length > 0;
-  $('empty').textContent = total === 0
-    ? (me.owner ? 'Nothing here yet. Tap “+ Add item” to start the list.' : "Lilia hasn't added anything yet. Check back soon!")
-    : 'Nothing to show for this filter.';
+  $('empty').replaceChildren(
+    el('span', { className: 'big', textContent: total === 0 ? '🎁' : '🔍' }),
+    total === 0
+      ? (me.owner ? 'Nothing here yet. Tap “Add a wish” to start the list.' : "Lilia hasn't added anything yet. Check back soon!")
+      : 'Nothing to show for this filter.');
 }
 
 function card(it, showClaims) {
   const mine = showClaims && it.claim && it.claim.uid === me.uid;
   const taken = showClaims && it.claim && !mine;
-
+  const url = safeUrl(it.url);
   const img = safeUrl(it.image);
+
   const pic = el('div', { className: 'pic' });
-  const placeholder = () => { pic.classList.add('none'); pic.replaceChildren(el('span', { className: 'ph', textContent: '🎁' })); };
+  const placeholder = () => {
+    pic.classList.add('none', 'g' + (hash(it.title) % 5));
+    pic.querySelector('img')?.remove();
+    pic.prepend(el('div', {},
+      el('span', { className: 'emoji', textContent: emojiFor(it.title + ' ' + (it.url || '')) }),
+      url ? el('span', { className: 'store', textContent: storeName(url) }) : null));
+  };
   if (img) {
     const i = el('img', { src: img, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' });
     i.addEventListener('error', placeholder);
     pic.append(i);
   } else placeholder();
+  if (it.top) pic.append(el('span', { className: 'ribbon', textContent: '★ Top wish' }));
+  if (it.price) pic.append(el('span', { className: 'pricetag', textContent: it.price }));
+  if (taken) pic.append(el('div', { className: 'stamp' }, el('span', { textContent: 'Taken' })));
 
-  const url = safeUrl(it.url);
   const body = el('div', { className: 'body' },
-    el('div', { className: 'tags' },
-      it.top ? el('span', { className: 'tag fav', textContent: '★ Really wants' }) : null,
-      OCCASIONS[it.occasion] ? el('span', { className: 'tag', textContent: OCCASIONS[it.occasion] }) : null),
+    OCCASIONS[it.occasion] ? el('span', { className: 'occasion', textContent: OCCASIONS[it.occasion] }) : null,
     el('h3', { textContent: it.title }),
-    it.price ? el('div', { className: 'price', textContent: it.price }) : null,
     it.notes ? el('div', { className: 'notes', textContent: it.notes }) : null,
-    url ? el('a', { className: 'view', href: url, target: '_blank', rel: 'noopener noreferrer', textContent: 'View item ↗' }) : null);
+    url ? el('a', { className: 'view', href: url, target: '_blank', rel: 'noopener noreferrer', textContent: `View on ${storeName(url)} ↗` }) : null);
 
   const node = el('article', { className: 'card' + (mine ? ' mine' : '') + (taken ? ' taken' : '') }, pic, body);
   if (showClaims) node.append(claimFoot(it, mine, taken));
@@ -412,32 +612,53 @@ function claimFoot(it, mine, taken) {
   const claimRef = ref(db, `items/${it.id}/claim`);
   if (mine) {
     const bought = it.claim.status === 'bought';
-    foot.append(el('span', { className: 'status mine', textContent: bought ? '✓ You bought this' : "You're getting this" }));
-    if (!bought) foot.append(btn('Mark bought', 'small green', () => update(claimRef, { status: 'bought' })));
-    foot.append(btn('Undo', 'small', () => remove(claimRef)));
+    foot.append(el('span', { className: 'status mine', textContent: bought ? '✓ You bought this' : "🎁 You're getting this" }));
+    const bar = el('div', { className: 'mine-bar' });
+    if (!bought) bar.append(btn('Mark bought', 'small green', () => update(claimRef, { status: 'bought' })));
+    bar.append(btn('Undo', 'small', () => remove(claimRef)));
+    foot.append(bar);
   } else if (taken) {
-    foot.append(el('span', { className: 'status taken', textContent: 'Taken' }));
-    if (me.owner) foot.append(btn('Clear', 'small', () => {
+    foot.append(el('span', { className: 'status taken', textContent: 'Someone has this one covered.' }));
+    if (me.owner) foot.append(btn('Clear', 'small ghost', () => {
       if (confirm(`Clear the claim on “${it.title}”? Whoever took it won't be told.`)) return remove(claimRef);
     }));
   } else {
-    foot.append(btn("I'll get this", 'primary', () => claim(it)));
+    const b = btn("I'll get this", 'primary block', () => claim(it, b));
+    foot.append(b);
   }
   return foot;
 }
 
-async function claim(it) {
+async function claim(it, button) {
+  const rect = button.getBoundingClientRect();
   const res = await runTransaction(ref(db, `items/${it.id}/claim`), (cur) => {
     if (cur && cur.uid !== me.uid) return; // someone else got there first
     return { uid: me.uid, name: me.name, status: 'planning', at: Date.now() };
   });
-  if (!res.committed) alert('Someone else just took this one.');
+  if (!res.committed) return alert('Someone else just took this one.');
+  confetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function confetti(x, y) {
+  if (reduceMotion) return;
+  const colors = ['#b4232f', '#c9973a', '#1f5c45', '#f2b5bb', '#ffd98a'];
+  for (let i = 0; i < 36; i++) {
+    const p = el('div', { className: 'confetti' });
+    p.style.background = colors[i % colors.length];
+    document.body.append(p);
+    const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 110;
+    const dx = Math.cos(a) * d, dy = Math.sin(a) * d - 60;
+    p.animate([
+      { transform: `translate(${x}px, ${y}px) rotate(0deg)`, opacity: 1 },
+      { transform: `translate(${x + dx}px, ${y + dy + 140}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0 },
+    ], { duration: 900 + Math.random() * 500, easing: 'cubic-bezier(.2,.7,.4,1)' }).onfinish = () => p.remove();
+  }
 }
 
 function ownerFoot(it) {
   return el('div', { className: 'owner' },
-    btn('Edit', 'small', () => openEditor(it)),
-    btn('Delete', 'small', () => {
+    btn('Edit', 'small ghost', () => openEditor(it)),
+    btn('Delete', 'small ghost', () => {
       if (confirm(`Delete “${it.title}” from the list?`)) return remove(ref(db, `items/${it.id}`));
     }));
 }
@@ -459,9 +680,19 @@ const form = $('editForm');
 const F = form.elements;
 let editingId = null;
 
+function previewImage() {
+  const u = safeUrl(F.image.value.trim());
+  const box = $('imgPrev'), im = box.querySelector('img');
+  if (!u) { box.classList.remove('show'); im.removeAttribute('src'); return; }
+  im.onload = () => box.classList.add('show');
+  im.onerror = () => box.classList.remove('show');
+  im.src = u;
+}
+F.image.addEventListener('input', previewImage);
+
 function openEditor(it) {
   editingId = it ? it.id : null;
-  $('editHeading').textContent = it ? 'Edit item' : 'Add item';
+  $('editHeading').textContent = it ? 'Edit wish' : 'Add a wish';
   form.reset();
   F.title.value = it?.title || '';
   F.url.value = it?.url || '';
@@ -470,12 +701,14 @@ function openEditor(it) {
   F.image.value = it?.image || '';
   F.notes.value = it?.notes || '';
   F.top.checked = !!it?.top;
+  previewImage();
   dlg.showModal();
   F.title.focus();
 }
 
 $('addBtn').addEventListener('click', () => openEditor(null));
 $('editCancel').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -511,7 +744,7 @@ function renderAccess(emails) {
   const keys = Object.keys(emails).filter((k) => emails[k]).sort();
   $('accessList').replaceChildren(...(keys.length ? keys.map((k) => el('li', {},
     el('span', { textContent: decodeEmail(k) }),
-    btn('Remove', 'small', () => {
+    btn('Remove', 'small ghost', () => {
       if (confirm(`Remove ${decodeEmail(k)}? They won't be able to see the list.`)) return remove(ref(db, `access/emails/${k}`));
     }))) : [el('li', { className: 'muted', textContent: 'Nobody added yet.' })]));
 }

@@ -208,6 +208,15 @@
   .mine-bar { display: flex; gap: 8px; flex: 1; }
   .mine-bar .btn { flex: 1; }
   .owner { display: flex; justify-content: flex-end; gap: 2px; padding: 0 8px 8px; margin-top: -4px; }
+  .card.removed { border-style: dashed; border-color: var(--berry); box-shadow: var(--shadow-sm); }
+  .notice {
+    flex: 1 1 100%; display: flex; align-items: center; gap: 10px; font-size: .86rem; line-height: 1.35;
+    padding: 10px 10px 10px 12px; border-radius: 12px;
+    background: color-mix(in srgb, var(--gold) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  }
+  .notice.warn { background: color-mix(in srgb, var(--berry) 10%, var(--surface)); border-color: color-mix(in srgb, var(--berry) 40%, transparent); }
+  .notice p { margin: 0; flex: 1; }
+  .notice b { display: block; }
 
   .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
   .empty .big { font-size: 3rem; display: block; margin-bottom: 8px; }
@@ -522,6 +531,7 @@ onAuthStateChanged(auth, (user) => {
     uid: user.uid,
     email,
     name: (user.displayName || email).split(' ')[0],
+    fullName: user.displayName || email.split('@')[0],
     owner: OWNERS.includes(email),
     surprise: email === SURPRISE_FOR,
   };
@@ -531,6 +541,12 @@ onAuthStateChanged(auth, (user) => {
 
   unsubs.push(onValue(ref(db, 'items'), (snap) => {
     items = snap.val() || {};
+    if (me && me.owner) {
+      // A removed item is kept only until its claimer has seen the heads-up.
+      for (const [id, it] of Object.entries(items)) {
+        if (it && it.removed && !it.claim) remove(ref(db, `items/${id}`)).catch(() => {});
+      }
+    }
     render();
     show('list');
   }, () => {
@@ -604,12 +620,17 @@ function render() {
   if (!me) return;
   const showClaims = !me.surprise;
   const hideTaken = showClaims && $('hideTaken').checked;
-  const all = Object.entries(items).map(([id, it]) => ({ id, ...it })).filter((it) => it.title);
+  const every = Object.entries(items).map(([id, it]) => ({ id, ...it })).filter((it) => it.title);
+  const all = every.filter((it) => !it.removed);
+  const isMine = (it) => it.claim && it.claim.uid === me.uid;
+  const attention = (it) => showClaims && isMine(it) && (it.removed || changedSinceClaim(it)) ? 1 : 0;
 
-  const list = all
-    .filter((it) => filter === 'all' || it.occasion === filter)
+  const list = every
+    .filter((it) => !it.removed || (showClaims && it.claim && (isMine(it) || me.owner)))
+    .filter((it) => filter === 'all' || it.occasion === filter || attention(it))
     .filter((it) => !(hideTaken && it.claim && it.claim.uid !== me.uid))
     .sort((a, b) => {
+      if (attention(a) !== attention(b)) return attention(b) - attention(a);
       if (showClaims) {
         const ta = a.claim && a.claim.uid !== me.uid ? 1 : 0;
         const tb = b.claim && b.claim.uid !== me.uid ? 1 : 0;
@@ -639,6 +660,9 @@ function render() {
       : 'Nothing to show for this filter.');
 }
 
+const changedSinceClaim = (it) => !!(it.claim && it.updated && it.updated > (it.claim.at || 0));
+const canSeeWho = () => me.owner && !me.surprise;
+
 function card(it, showClaims) {
   const mine = showClaims && it.claim && it.claim.uid === me.uid;
   const taken = showClaims && it.claim && !mine;
@@ -660,7 +684,7 @@ function card(it, showClaims) {
   } else placeholder();
   if (it.top) pic.append(el('span', { className: 'ribbon', textContent: '★ Top wish' }));
   if (it.price) pic.append(el('span', { className: 'pricetag', textContent: it.price }));
-  if (taken) pic.append(el('div', { className: 'stamp' }, el('span', { textContent: 'Taken' })));
+  if (taken) pic.append(el('div', { className: 'stamp' }, el('span', { textContent: it.removed ? 'Removed' : 'Taken' })));
 
   const body = el('div', { className: 'body' },
     OCCASIONS[it.occasion] ? el('span', { className: 'occasion', textContent: OCCASIONS[it.occasion] }) : null,
@@ -668,7 +692,7 @@ function card(it, showClaims) {
     it.notes ? el('div', { className: 'notes', textContent: it.notes }) : null,
     url ? el('a', { className: 'view', href: url, target: '_blank', rel: 'noopener noreferrer', textContent: `View on ${storeName(url)} ↗` }) : null);
 
-  const node = el('article', { className: 'card' + (mine ? ' mine' : '') + (taken ? ' taken' : '') }, pic, body);
+  const node = el('article', { className: 'card' + (mine ? ' mine' : '') + (taken ? ' taken' : '') + (it.removed ? ' removed' : '') }, pic, body);
   if (showClaims) node.append(claimFoot(it, mine, taken));
   if (me.owner) node.append(ownerFoot(it));
   return node;
@@ -677,6 +701,17 @@ function card(it, showClaims) {
 function claimFoot(it, mine, taken) {
   const foot = el('div', { className: 'foot' });
   const claimRef = ref(db, `items/${it.id}/claim`);
+  if (mine && it.removed) {
+    foot.append(el('div', { className: 'notice warn' },
+      el('p', {}, el('b', { textContent: 'Lilia took this off her list.' }), "If you haven't bought it yet, you can skip it."),
+      btn('Got it', 'small', () => remove(claimRef))));
+    return foot;
+  }
+  if (mine && changedSinceClaim(it)) {
+    foot.append(el('div', { className: 'notice' },
+      el('p', {}, el('b', { textContent: 'Updated since you picked this.' }), 'Double-check the details before you buy.'),
+      btn('OK', 'small', () => update(claimRef, { at: Date.now() }))));
+  }
   if (mine) {
     const bought = it.claim.status === 'bought';
     foot.append(el('span', { className: 'status mine', textContent: bought ? '✓ You bought this' : "🎁 You're getting this" }));
@@ -685,9 +720,14 @@ function claimFoot(it, mine, taken) {
     bar.append(btn('Undo', 'small', () => remove(claimRef)));
     foot.append(bar);
   } else if (taken) {
-    foot.append(el('span', { className: 'status taken', textContent: 'Someone has this one covered.' }));
-    if (me.owner) foot.append(btn('Clear', 'small ghost', () => {
-      if (confirm(`Clear the claim on “${it.title}”? Whoever took it won't be told.`)) return remove(claimRef);
+    const who = it.claim.name || 'Someone';
+    const bought = it.claim.status === 'bought';
+    foot.append(el('span', { className: 'status taken', textContent:
+      !canSeeWho() ? 'Someone has this one covered.'
+      : it.removed ? `Lilia removed this. ${who} ${bought ? 'already bought it' : 'was getting it'}, and will see a heads-up.`
+      : `${who} ${bought ? 'bought this' : 'is getting this'}.` }));
+    if (me.owner && !it.removed) foot.append(btn('Clear', 'small ghost', () => {
+      if (confirm(`Clear ${who}'s claim on “${it.title}”? They won't be told.`)) return remove(claimRef);
     }));
   } else {
     const b = btn("I'll get this", 'primary block', () => claim(it, b));
@@ -700,7 +740,7 @@ async function claim(it, button) {
   const rect = button.getBoundingClientRect();
   const res = await runTransaction(ref(db, `items/${it.id}/claim`), (cur) => {
     if (cur && cur.uid !== me.uid) return; // someone else got there first
-    return { uid: me.uid, name: me.name, status: 'planning', at: Date.now() };
+    return { uid: me.uid, name: me.fullName, status: 'planning', at: Date.now() };
   });
   if (!res.committed) return alert('Someone else just took this one.');
   confetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -723,10 +763,22 @@ function confetti(x, y) {
 }
 
 function ownerFoot(it) {
+  const itemRef = ref(db, `items/${it.id}`);
+  if (it.removed) {
+    return el('div', { className: 'owner' },
+      btn('Put it back', 'small ghost', () => update(itemRef, { removed: null })),
+      btn('Delete for good', 'small ghost', () => {
+        if (confirm(`Delete “${it.title}” for good? ${it.claim?.name || 'Whoever had it'} won't get a heads-up.`)) return remove(itemRef);
+      }));
+  }
   return el('div', { className: 'owner' },
     btn('Edit', 'small ghost', () => openEditor(it)),
     btn('Delete', 'small ghost', () => {
-      if (confirm(`Delete “${it.title}” from the list?`)) return remove(ref(db, `items/${it.id}`));
+      const note = it.claim && canSeeWho() ? ` ${it.claim.name || 'Someone'} picked it, and will see a heads-up that it's off the list.` : '';
+      if (!confirm(`Delete “${it.title}” from the list?${note}`)) return;
+      // If someone already picked it, keep it out of sight until they've seen the heads-up.
+      // Lilia can't tell the difference: either way it disappears from her list.
+      return it.claim ? update(itemRef, { removed: true }) : remove(itemRef);
     }));
 }
 
@@ -792,7 +844,11 @@ form.addEventListener('submit', async (e) => {
   const save = form.querySelector('[type=submit]');
   save.disabled = true;
   try {
-    if (editingId) await update(ref(db, `items/${editingId}`), data);
+    if (editingId) {
+      const before = items[editingId] || {};
+      const changed = ['title', 'url', 'price', 'occasion', 'image', 'notes'].some((k) => (before[k] || '') !== data[k]);
+      await update(ref(db, `items/${editingId}`), changed ? { ...data, updated: serverTimestamp() } : data);
+    }
     else await set(push(ref(db, 'items')), { ...data, created: serverTimestamp() });
     dlg.close();
   } catch (err) {

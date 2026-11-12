@@ -576,7 +576,72 @@ const SECTION_LABEL = { room: 'Room decor', beauty: 'Beauty', clothes: 'Clothes'
 
 const $ = (id) => document.getElementById(id);
 const views = ['loading', 'signedOut', 'denied', 'list'];
-function show(view) { for (const v of views) $(v).hidden = v !== view; }
+let currentView = 'loading';
+function show(view) {
+  if (view !== currentView) snaplog(`view ${currentView} → ${view} (y=${Math.round(scrollY)})`);
+  currentView = view;
+  for (const v of views) $(v).hidden = v !== view;
+}
+
+// ---------- "Snapback" diagnostics ----------
+// Snapback = scrolling down the list on iPhone and the page snapping back to the top.
+// This keeps a short log for the current tab. Open the page with #debug on the end of
+// the address to see it.
+const SNAPLOG = 'wishlist.snaplog';
+function snaplog(msg) {
+  try {
+    const a = JSON.parse(sessionStorage.getItem(SNAPLOG) || '[]');
+    a.push(new Date().toTimeString().slice(0, 8) + ' ' + msg);
+    sessionStorage.setItem(SNAPLOG, JSON.stringify(a.slice(-80)));
+  } catch (e) {}
+  if (location.hash === '#debug') showSnaplog();
+}
+function showSnaplog() {
+  let box = document.getElementById('snaplog');
+  if (!box) {
+    box = el('pre', { id: 'snaplog' });
+    box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99;max-height:40vh;overflow:auto;margin:0;padding:8px;'
+      + 'font:11px/1.35 ui-monospace,Menlo,monospace;background:rgba(0,0,0,.85);color:#9f9;border-radius:8px;white-space:pre-wrap;';
+    document.body.append(box);
+  }
+  try { box.textContent = JSON.parse(sessionStorage.getItem(SNAPLOG) || '[]').join('\n'); } catch (e) {}
+  box.scrollTop = box.scrollHeight;
+}
+const nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+snaplog(`page load (${nav ? nav.type : 'unknown'})`);
+addEventListener('pageshow', (e) => { if (e.persisted) snaplog('pageshow from back/forward cache'); });
+addEventListener('pagehide', () => snaplog(`pagehide (y=${Math.round(scrollY)})`));
+document.addEventListener('visibilitychange', () => snaplog(`tab ${document.visibilityState}`));
+addEventListener('error', (e) => snaplog('error: ' + e.message));
+addEventListener('unhandledrejection', (e) => snaplog('rejection: ' + (e.reason && (e.reason.code || e.reason.message))));
+
+// Remember the scroll position so an unexpected reload can put people back where they were.
+const SCROLLKEY = 'wishlist.scroll';
+let lastY = 0, scrollSaveT = 0;
+addEventListener('scroll', () => {
+  const y = Math.round(scrollY);
+  if (lastY > 600 && y < 40) snaplog(`jump to top from y=${lastY}`);
+  lastY = y;
+  const now = Date.now();
+  if (now - scrollSaveT > 400 && currentView === 'list') {
+    scrollSaveT = now;
+    try { sessionStorage.setItem(SCROLLKEY, JSON.stringify({ y, t: now })); } catch (e) {}
+  }
+}, { passive: true });
+let restoredScroll = false;
+function restoreScrollOnce() {
+  if (restoredScroll) return;
+  restoredScroll = true;
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SCROLLKEY) || 'null');
+    if (s && Date.now() - s.t < 120000 && s.y > 200) {
+      requestAnimationFrame(() => { scrollTo(0, s.y); snaplog(`restored scroll to y=${s.y}`); });
+    }
+  } catch (e) {}
+}
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+if (location.hash === '#debug') showSnaplog();
+addEventListener('hashchange', () => { if (location.hash === '#debug') showSnaplog(); else document.getElementById('snaplog')?.remove(); });
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function store(key, value) {
@@ -648,12 +713,30 @@ $('signIn').addEventListener('click', async () => {
       : `Sign-in didn't work (${e.code || e.message}). Try again?`;
   }
 });
-$('signOut').addEventListener('click', () => signOut(auth));
+let signingOut = false;
+let signOutGrace = null;
+$('signOut').addEventListener('click', () => { signingOut = true; signOut(auth); });
 
 onAuthStateChanged(auth, (user) => {
+  snaplog(`auth: ${user ? 'signed in' : 'signed out'}${signingOut ? ' (sign-out tapped)' : ''}`);
   // Firebase can re-announce the same signed-in user (e.g. after a token refresh or when the
   // tab wakes up). Re-subscribing would flash the loading view and throw the page back to the top.
-  if (user && me && user.uid === me.uid) return;
+  if (user && me && user.uid === me.uid) {
+    if (signOutGrace) { clearTimeout(signOutGrace); signOutGrace = null; snaplog('auth blip ignored'); }
+    return;
+  }
+  // It can also briefly report "signed out" and then "signed in" again. Unless someone tapped
+  // Sign out, wait a moment before believing it, so the list doesn't get torn down for a blip.
+  if (!user && me && !signingOut) {
+    if (!signOutGrace) signOutGrace = setTimeout(() => { signOutGrace = null; applyAuth(null); }, 3000);
+    return;
+  }
+  clearTimeout(signOutGrace); signOutGrace = null;
+  signingOut = false;
+  applyAuth(user);
+});
+
+function applyAuth(user) {
   unsubs.forEach((u) => u()); unsubs = [];
   items = {};
   profile = null;
@@ -687,6 +770,7 @@ onAuthStateChanged(auth, (user) => {
     }
     render();
     show('list');
+    restoreScrollOnce();
   }, () => {
     $('deniedEmail').textContent = email;
     $('addBtn').hidden = true;
@@ -704,7 +788,7 @@ onAuthStateChanged(auth, (user) => {
     unsubs.push(onValue(ref(db, 'access/emails'), (snap) => renderAccess(snap.val() || {})));
   }
   setupChrome();
-});
+}
 
 // ---------- list ----------
 
@@ -799,7 +883,7 @@ function render() {
     else c.style.animation = 'none';
     return c;
   }));
-  if (Math.abs(scrollY - y) > 1) scrollTo(0, y);
+  if (Math.abs(scrollY - y) > 1) { snaplog(`render moved scroll ${Math.round(y)} → ${Math.round(scrollY)}, put back`); scrollTo(0, y); }
 
   const total = all.length;
   $('empty').hidden = list.length > 0;

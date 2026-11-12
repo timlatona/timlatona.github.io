@@ -203,6 +203,23 @@
     background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 14%, var(--surface)), var(--surface)); }
   .import h2 { margin: 0 0 2px; font-family: var(--display); font-size: 1.15rem; }
   .import p { margin: 0; }
+  .sizes-btn {
+    width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
+    margin: 4px 0 16px; padding: 10px 14px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm); transition: border-color .2s;
+  }
+  .sizes-btn:hover { border-color: var(--muted); }
+  .sizes-btn .ico { font-size: 1.4rem; flex: none; }
+  .sizes-btn .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .sizes-btn b { font-family: var(--display); font-weight: 600; font-size: 1rem; }
+  .sizes-btn small { color: var(--muted); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sizes-btn .chev { font-size: 1.5rem; color: var(--muted); flex: none; line-height: 1; }
+  dialog .sheet { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  dl.sizes { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; font-size: .92rem; }
+  dl.sizes dt { color: var(--muted); }
+  dl.sizes dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+  dl.sizes dd.full { grid-column: 1 / -1; }
+  @media (max-width: 480px) { dl.sizes { grid-template-columns: 1fr; gap: 0; } dl.sizes dt { font-size: .8rem; } dl.sizes dd { margin-bottom: 10px; } }
   .profile { padding: 0; margin: 4px 0 18px; }
   .profile summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding: 14px 18px; font-family: var(--display); font-weight: 600; font-size: 1.05rem; }
@@ -351,7 +368,8 @@
     }
     dialog[open] { animation: sheet .26s cubic-bezier(.2,.8,.3,1); }
     dialog form { padding: 18px 16px 20px; gap: 12px; }
-    dialog form::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: -6px auto 2px; }
+    dialog .sheet { padding: 18px 16px 20px; gap: 12px; }
+    dialog .sheet::before, dialog form::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: -6px auto 2px; }
     dialog h2 { font-size: 1.4rem; }
     .actions .btn { flex: 1; padding: 12px 18px; }
   }
@@ -420,10 +438,11 @@
       <button id="importBtn" class="btn primary" type="button">Add them to the list</button>
     </section>
 
-    <details id="profileCard" class="panel profile" hidden>
-      <summary><span>👗 Sizes &amp; favorites</span><button id="profileEdit" class="btn small ghost" type="button" hidden>Edit</button></summary>
-      <dl id="profileRows"></dl>
-    </details>
+    <button id="profileCard" class="sizes-btn" type="button" hidden>
+      <span class="ico" aria-hidden="true">👗</span>
+      <span class="txt"><b>Sizes &amp; favorites</b><small id="sizesPreview"></small></span>
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
 
     <div class="stats">
       <div><span class="count" id="count"></span> <span class="hint" id="intro"></span></div>
@@ -499,6 +518,18 @@
       <button type="submit" class="btn primary">Save</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="sizesDlg" aria-labelledby="sizesTitle">
+  <div class="sheet">
+    <h2 id="sizesTitle">Lilia's sizes &amp; favorites</h2>
+    <dl id="profileRows" class="sizes"></dl>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="profileEdit" hidden>Edit</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn primary" id="sizesClose">Done</button>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="profileDlg">
@@ -664,7 +695,7 @@ function setupChrome() {
   $('hideTaken').checked = store('wishlist.hideTaken') === '1';
   $('subtitle').textContent = me.surprise
     ? `Hi ${me.name}! Add anything you're hoping for.`
-    : `Hi ${me.name}! Pick something, and nobody else will buy it too.`;
+    : `Hi ${me.name}! Mark what you're getting so nobody doubles up.`;
   $('intro').textContent = me.surprise
     ? "You won't see who's getting what. It's a surprise!"
     : "Lilia can't see what's been taken.";
@@ -1044,9 +1075,9 @@ function renderProfile() {
   if (!me || !profile || (!text && !me.owner)) { card.hidden = true; return; }
   card.hidden = false;
   $('profileEdit').hidden = !me.owner;
-  const saved = store('wishlist.profileOpen');
-  card.open = saved === null ? true : saved === '1';
   const rows = text ? text.split('\n').map((l) => l.trim()).filter(Boolean) : [];
+  const labels = rows.map((l) => (l.indexOf(':') > 0 ? l.slice(0, l.indexOf(':')) : l).trim());
+  $('sizesPreview').textContent = rows.length ? labels.join(', ') : 'Not filled in yet. Tap to add.';
   $('profileRows').replaceChildren(...(rows.length ? rows.flatMap((line) => {
     const i = line.indexOf(':');
     return i > 0
@@ -1054,11 +1085,14 @@ function renderProfile() {
       : [el('dd', { className: 'full', textContent: line })];
   }) : [el('dd', { className: 'full muted', textContent: 'Add sizes, colors and favorites so people can shop with confidence.' })]));
 }
-$('profileCard').addEventListener('toggle', (e) => store('wishlist.profileOpen', e.target.open ? '1' : '0'));
+const sizesDlg = $('sizesDlg');
+$('profileCard').addEventListener('click', () => sizesDlg.showModal());
+$('sizesClose').addEventListener('click', () => sizesDlg.close());
+sizesDlg.addEventListener('click', (e) => { if (e.target === sizesDlg) sizesDlg.close(); });
 
 const profileDlg = $('profileDlg');
-$('profileEdit').addEventListener('click', (e) => {
-  e.preventDefault();
+$('profileEdit').addEventListener('click', () => {
+  sizesDlg.close();
   $('profileForm').elements.text.value = profile?.text || '';
   profileDlg.showModal();
 });

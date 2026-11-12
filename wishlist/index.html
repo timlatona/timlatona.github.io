@@ -296,6 +296,7 @@
   @keyframes pop { from { opacity: 0; transform: translateY(12px) scale(.98); } }
   dialog::backdrop { background: rgba(20,12,10,.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
   dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  dialog h2:focus { outline: none; }
   dialog h2 { margin: 0; font-family: var(--display); font-size: 1.6rem; }
   dialog label { display: block; font-weight: 700; font-size: .88rem; }
   dialog label .muted { font-weight: 400; }
@@ -363,8 +364,9 @@
 
     /* editor becomes a bottom sheet */
     dialog {
-      width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 22px 22px 0 0;
-      max-height: 92dvh; padding-bottom: env(safe-area-inset-bottom);
+      width: 100%; max-width: 100%; margin: auto 0 var(--kb, 0px); border-radius: 22px 22px 0 0;
+      max-height: calc(100dvh - var(--kb, 0px) - 12px); padding-bottom: env(safe-area-inset-bottom);
+      transition: margin-bottom .2s ease;
     }
     dialog[open] { animation: sheet .26s cubic-bezier(.2,.8,.3,1); }
     dialog form { padding: 18px 16px 20px; gap: 12px; }
@@ -467,7 +469,7 @@
 
 <dialog id="editDlg">
   <form id="editForm">
-    <h2 id="editHeading">Add a wish</h2>
+    <h2 id="editHeading" tabindex="-1" autofocus>Add a wish</h2>
     <label>What is it?
       <input name="title" required maxlength="120" autocomplete="off" placeholder="e.g. Stanley tumbler, 40 oz">
     </label>
@@ -506,10 +508,10 @@
 
 <dialog id="pickDlg">
   <form id="pickForm">
-    <h2>What are you getting?</h2>
+    <h2 tabindex="-1" autofocus>What are you getting?</h2>
     <p class="muted" id="pickFor"></p>
     <label>A few words so nobody doubles up
-      <input name="note" required maxlength="120" autocomplete="off" placeholder="e.g. vanilla candle from Target">
+      <input name="note" required maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="e.g. vanilla candle from Target">
     </label>
     <div class="actions">
       <button type="button" class="btn ghost" id="pickRemove" hidden>Remove mine</button>
@@ -534,7 +536,7 @@
 
 <dialog id="profileDlg">
   <form id="profileForm">
-    <h2>Sizes &amp; favorites</h2>
+    <h2 tabindex="-1" autofocus>Sizes &amp; favorites</h2>
     <p class="muted">One per line, like “Shoes: Women's 6.5”. Everyone on the list can see this.</p>
     <textarea name="text" rows="10" maxlength="2000"></textarea>
     <div class="actions">
@@ -587,6 +589,24 @@ let filter = SECTIONS[store('wishlist.filter')] ? store('wishlist.filter') : 'al
 let profile = null;       // { text, imported: { deck2026: true } }
 let profileDenied = false; // true until the updated database rules are published
 let unsubs = [];
+
+// On phones, don't pop the keyboard the moment a popup opens: it covers the popup.
+// People tap the field when they're ready. On computers, jump straight into the field.
+const touch = matchMedia('(pointer: coarse)').matches;
+function focusOnDesktop(input) { if (!touch) input.focus(); }
+
+// iPhones don't shrink the page when the keyboard opens, so bottom-anchored popups end up
+// behind it. Track the keyboard's height and lift popups by that much.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const lift = () => {
+    const kb = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+  };
+  vv.addEventListener('resize', lift);
+  vv.addEventListener('scroll', lift);
+  lift();
+}
 
 // Pause the snow once the header scrolls away.
 if ('IntersectionObserver' in window) {
@@ -916,7 +936,7 @@ function openPick(it) {
   pickForm.elements.note.value = mineP?.note || '';
   $('pickRemove').hidden = !mineP;
   pickDlg.showModal();
-  pickForm.elements.note.focus();
+  focusOnDesktop(pickForm.elements.note);
 }
 $('pickCancel').addEventListener('click', () => pickDlg.close());
 pickDlg.addEventListener('click', (e) => { if (e.target === pickDlg) pickDlg.close(); });
@@ -1030,7 +1050,7 @@ function openEditor(it) {
   F.top.checked = !!it?.top;
   previewImage();
   dlg.showModal();
-  F.title.focus();
+  focusOnDesktop(F.title);
 }
 
 $('addBtn').addEventListener('click', () => openEditor(null));

@@ -147,7 +147,8 @@
   .switch input:checked::after { transform: translateX(14px); }
   .toolbar .spacer { flex: 1; }
 
-  .stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 6px 2px 18px; }
+  .stats { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin: 6px 2px 18px; }
+  .stats .count { margin-right: 8px; }
   .stats .count { font-family: var(--display); font-size: 1.25rem; font-weight: 700; }
   .stats .hint { color: var(--muted); font-size: .88rem; }
 
@@ -203,7 +204,7 @@
   .foot { padding: 10px 16px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .status { font-size: .88rem; font-weight: 700; flex: 1 1 100%; }
   .status.mine { color: var(--pine); }
-  .status.taken { color: var(--muted); font-weight: 500; }
+  .status.taken { color: var(--muted); font-weight: 500; flex: 1 1 auto; }
   .mine-bar { display: flex; gap: 8px; flex: 1; }
   .mine-bar .btn { flex: 1; }
   .owner { display: flex; justify-content: flex-end; gap: 2px; padding: 0 8px 8px; margin-top: -4px; }
@@ -256,6 +257,70 @@
   .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
   .confetti { position: fixed; z-index: 50; pointer-events: none; width: 8px; height: 12px; border-radius: 2px; top: 0; left: 0; }
+
+  /* ---------- phones: compact list rows ---------- */
+  @media (max-width: 600px) {
+    .hero { padding: max(14px, env(safe-area-inset-top)) 16px 22px; }
+    body:has(#list[hidden]) .hero { padding-bottom: 60px; }
+    h1 { font-size: clamp(2.1rem, 11vw, 2.8rem); margin: 16px 0 4px; }
+    .subtitle { font-size: .93rem; }
+    .countdown { font-size: .76rem; padding: 4px 10px; white-space: nowrap; }
+    .who { font-size: .78rem; }
+    .center { padding: 22px 18px; }
+
+    main { padding-bottom: 104px; }
+    .toolbar { gap: 8px; padding: 10px 16px; }
+    .chip { padding: 7px 11px; font-size: .84rem; }
+    .switch { font-size: .82rem; }
+    .stats { margin: 2px 2px 12px; gap: 2px 10px; }
+    .stats .count { font-size: 1.08rem; }
+    .stats .hint { font-size: .82rem; display: block; }
+
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    .card {
+      display: grid; grid-template-columns: 112px minmax(0, 1fr);
+      grid-template-areas: "pic body" "foot foot" "owner owner";
+      border-radius: 16px;
+    }
+    .pic { grid-area: pic; width: 100px; height: 100px; aspect-ratio: 1 / 1; margin: 12px 0 0 12px; border-radius: 12px; border: 1px solid var(--line); }
+    .pic.none { aspect-ratio: 1 / 1; }
+    .pic.none .store { display: none; }
+    .pic.none .emoji { font-size: 2.1rem; }
+    .pic img { padding: 4px; }
+    .ribbon { top: 5px; left: 5px; font-size: .6rem; padding: 2px 6px; }
+    .pricetag { bottom: 5px; right: 5px; font-size: .74rem; padding: 2px 7px; }
+    .stamp span { font-size: .78rem; border-width: 2px; border-radius: 6px; padding: 2px 6px; letter-spacing: .08em; }
+    .body { grid-area: body; padding: 12px 14px 0 14px; gap: 2px; }
+    .card h3 { font-size: 1.04rem; }
+    .notes { font-size: .84rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .view { font-size: .82rem; margin-top: 2px; }
+    .foot { grid-area: foot; padding: 12px 12px 12px; gap: 8px; }
+    .status { font-size: .85rem; }
+    .btn.block { padding: 11px 18px; }
+    .owner { grid-area: owner; margin-top: -6px; padding: 0 6px 6px; }
+    .card:not(:has(.foot)) { grid-template-areas: "pic body" "pic owner"; grid-template-rows: 1fr auto; padding-bottom: 6px; }
+    .card:not(:has(.foot)) .owner { margin-top: 0; padding: 0 6px 0; align-self: end; }
+    .card:not(:has(.foot)) .pic { margin-bottom: 6px; }
+    @media (hover: hover) { .card:hover { transform: none; } }
+
+    #accessPanel { margin-top: 28px; padding: 18px; }
+    .fab { padding: 14px 20px; }
+
+    /* editor becomes a bottom sheet */
+    dialog {
+      width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 22px 22px 0 0;
+      max-height: 92dvh; padding-bottom: env(safe-area-inset-bottom);
+    }
+    dialog[open] { animation: sheet .26s cubic-bezier(.2,.8,.3,1); }
+    dialog form { padding: 18px 16px 20px; gap: 12px; }
+    dialog form::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: -6px auto 2px; }
+    dialog h2 { font-size: 1.4rem; }
+    .actions .btn { flex: 1; padding: 12px 18px; }
+  }
+  @keyframes sheet { from { transform: translateY(100%); } }
+  @media (max-width: 400px) {
+    .who .email { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -308,9 +373,11 @@
   <section id="list" hidden>
     <div class="toolbar">
       <div class="seg" id="chips" role="group" aria-label="Show items for"></div>
+    </div>
+    <div class="stats">
+      <div><span class="count" id="count"></span> <span class="hint" id="intro"></span></div>
       <label class="switch" id="hideTakenWrap"><input type="checkbox" id="hideTaken"> Hide taken</label>
     </div>
-    <div class="stats"><span class="count" id="count"></span><span class="hint" id="intro"></span></div>
     <div id="items" class="grid"></div>
     <div id="empty" class="empty" hidden></div>
 

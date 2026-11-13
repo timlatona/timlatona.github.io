@@ -433,7 +433,7 @@
     </div>
     <section id="importPanel" class="panel import" hidden>
       <div>
-        <h2>Lilia's birthday deck is ready</h2>
+        <h2 id="importTitle">Lilia's birthday deck is ready</h2>
         <p class="muted" id="importText"></p>
       </div>
       <button id="importBtn" class="btn primary" type="button">Add them to the list</button>
@@ -847,7 +847,8 @@ function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) 
 const EMOJI = [
   [/tumbler|cup|mug|bottle|stanley|owala/i, '🥤'], [/shoe|sneaker|boot|nike|adidas|ugg|crocs/i, '👟'],
   [/makeup|lip|gloss|sephora|ulta|blush|mascara|skincare|serum|perfume/i, '💄'], [/book|novel/i, '📚'],
-  [/headphone|airpod|earbud|speaker|beats/i, '🎧'], [/hoodie|sweater|shirt|pants|leggings|lululemon|jacket|dress|top/i, '👕'],
+  [/headphone|airpod|earbud|speaker|beats/i, '🎧'], [/hoodie|sweater|shirt|pants|leggings|lululemon|jacket|dress|top|tee\b|tees|cami|tank|pajama/i, '👕'],
+  [/journal|notebook|planner/i, '📓'], [/handmade|homemade/i, '💌'], [/hairspray|curl|refresh/i, '💇‍♀️'],
   [/bag|purse|backpack|tote/i, '👜'], [/gift card|giftcard/i, '💳'], [/game|switch|playstation|xbox|lego|puzzle/i, '🎮'],
   [/necklace|ring|bracelet|earring|jewel/i, '💍'], [/candle/i, '🕯️'], [/phone|ipad|tablet|laptop|watch/i, '📱'],
   [/camera/i, '📷'], [/blanket|pillow|plush|squish|stuffed/i, '🧸'], [/art|paint|marker|sketch/i, '🎨'],
@@ -1217,29 +1218,65 @@ $('profileForm').addEventListener('submit', async (e) => {
   catch (err) { alert(`That didn't save (${err.code || err.message}). Have the new database rules been published?`); }
 });
 
-// ---------- one-time import of Lilia's birthday deck ----------
+// ---------- one-time batches from Lilia (her deck, then links she sends) ----------
+// Each batch file adds items and/or updates existing ones by title. An owner taps once to
+// apply it; profile/imported/<id> records that it's done so it never runs twice.
+const BATCHES = ['deck-2026.json', 'links-2026-11-13.json'];
+const batchCache = {};
+async function loadBatch(file) {
+  if (!batchCache[file]) batchCache[file] = fetch(file, { cache: 'no-store' }).then((r) => r.json());
+  return batchCache[file];
+}
+let pendingBatch = null;
 
-function renderImport() {
-  const show = !!(me && me.owner && (profileDenied || (profile && !(profile.imported && profile.imported.deck2026))));
-  $('importPanel').hidden = !show;
-  $('importBtn').disabled = profileDenied;
-  if (show) $('importText').textContent = profileDenied
-    ? 'One step first: paste the updated rules into Firebase (Realtime Database → Rules → Publish), then reload this page.'
-    : me.surprise
+async function renderImport() {
+  const panel = $('importPanel');
+  if (!(me && me.owner) || (!profile && !profileDenied)) { panel.hidden = true; return; }
+  if (profileDenied) {
+    panel.hidden = false;
+    $('importBtn').disabled = true;
+    $('importText').textContent = 'One step first: paste the updated rules into Firebase (Realtime Database → Rules → Publish), then reload this page.';
+    return;
+  }
+  const done = (profile && profile.imported) || {};
+  pendingBatch = null;
+  for (const file of BATCHES) {
+    try {
+      const b = await loadBatch(file);
+      if (!done[b.id]) { pendingBatch = b; break; }
+    } catch (e) { /* a missing batch file just gets skipped */ }
+  }
+  panel.hidden = !pendingBatch;
+  $('importBtn').disabled = false;
+  if (!pendingBatch) return;
+  $('importTitle').textContent = pendingBatch.title || "Lilia's birthday deck is ready";
+  $('importText').textContent = pendingBatch.blurb || (me.surprise
     ? 'Everything from your slides, with your photos, sorted into your sections. Your sizes and favorites go in the card at the top.'
-    : 'Everything from her slides, with her photos, sorted into her sections, plus her sizes and favorites.';
+    : 'Everything from her slides, with her photos, sorted into her sections, plus her sizes and favorites.');
 }
 
 $('importBtn').addEventListener('click', async () => {
   const b = $('importBtn');
+  const batch = pendingBatch;
+  if (!batch) return;
   b.disabled = true;
   try {
-    const deck = await (await fetch('deck-2026.json', { cache: 'no-store' })).json();
-    // Mark it first so a second tap (or a second device) can't add everything twice.
-    await set(ref(db, `profile/imported/${deck.id}`), true);
-    if (!(profile && profile.text)) await set(ref(db, 'profile/text'), deck.profile);
+    // Mark it first so a second tap (or a second device) can't apply it twice.
+    await set(ref(db, `profile/imported/${batch.id}`), true);
+    if (batch.profile && !(profile && profile.text)) await set(ref(db, 'profile/text'), batch.profile);
+    const img = (name) => (name ? new URL(`img/deck/${name}.jpg`, location.href).href : '');
+    const live = Object.entries(items).filter(([, it]) => it && !it.removed);
+    const missed = [];
+    for (const u of batch.updates || []) {
+      const hit = live.find(([, it]) => (it.title || '').trim().toLowerCase() === u.match.trim().toLowerCase());
+      if (!hit) { missed.push(u.match); continue; }
+      const patch = { ...u.set };
+      if (patch.image) patch.image = img(patch.image);
+      await update(ref(db, `items/${hit[0]}`), { ...patch, updated: serverTimestamp() });
+    }
+    const list = batch.items || [];
     const base = Date.now();
-    await Promise.all(deck.items.map((d, i) => set(push(ref(db, 'items')), {
+    await Promise.all(list.map((d, i) => set(push(ref(db, 'items')), {
       title: d.title,
       url: d.url || '',
       price: d.price || '',
@@ -1248,9 +1285,10 @@ $('importBtn').addEventListener('click', async () => {
       idea: !!d.idea,
       top: !!d.top,
       occasion: 'anytime',
-      image: d.image ? new URL(`img/deck/${d.image}.jpg`, location.href).href : '',
-      created: base + (deck.items.length - i),
+      image: img(d.image),
+      created: base + (list.length - i),
     })));
+    if (missed.length) alert(`Added everything, but couldn't find ${missed.map((m) => `“${m}”`).join(', ')} on the list to update. It may have been renamed or deleted.`);
   } catch (err) {
     alert(`That didn't work (${err.code || err.message}). Make sure the new database rules are published, then try again.`);
   } finally {

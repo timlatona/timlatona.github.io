@@ -583,9 +583,9 @@ const db = getDatabase(app);
 // Must match the owner emails in the database rules.
 // Bump with every change, and say what's new in a few words.
 const VERSION = {
-  number: '1.15',
+  number: '1.16',
   date: 'Nov 14',
-  whatsNew: 'Photos for some of Lilia’s new picks.',
+  whatsNew: 'Lilia’s Christmas list: her really-want picks are starred, with photos.',
 };
 
 const OWNERS = ['lilialatona@gmail.com', 'latona@gmail.com'];
@@ -1258,7 +1258,7 @@ $('profileForm').addEventListener('submit', async (e) => {
 // ---------- one-time batches from Lilia (her deck, then links she sends) ----------
 // Each batch file adds items and/or updates existing ones by title. An owner taps once to
 // apply it; profile/imported/<id> records that it's done so it never runs twice.
-const BATCHES = ['deck-2026.json', 'links-2026-11-13.json', 'photos-2026-11-14.json'];
+const BATCHES = ['deck-2026.json', 'links-2026-11-13.json', 'photos-2026-11-14.json', 'christmas-2026.json'];
 const batchCache = {};
 async function loadBatch(file) {
   if (!batchCache[file]) batchCache[file] = fetch(file, { cache: 'no-store' }).then((r) => r.json());
@@ -1301,7 +1301,8 @@ $('importBtn').addEventListener('click', async () => {
     // Mark it first so a second tap (or a second device) can't apply it twice.
     await set(ref(db, `profile/imported/${batch.id}`), true);
     if (batch.profile && !(profile && profile.text)) await set(ref(db, 'profile/text'), batch.profile);
-    const img = (name) => (name ? new URL(`img/deck/${name}.jpg`, location.href).href : '');
+    // Photo names are 'name' (birthday deck folder) or 'folder/name'.
+    const img = (name) => (name ? new URL(`img/${name.includes('/') ? name : `deck/${name}`}.jpg`, location.href).href : '');
     const live = Object.entries(items).filter(([, it]) => it && !it.removed);
     const missed = [];
     for (const u of batch.updates || []) {
@@ -1323,7 +1324,7 @@ $('importBtn').addEventListener('click', async () => {
       category: d.category,
       idea: !!d.idea,
       top: !!d.top,
-      occasion: 'anytime',
+      occasion: d.occasion || 'anytime',
       image: img(d.image),
       created: base + (list.length - i),
     })));

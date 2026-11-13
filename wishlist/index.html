@@ -260,6 +260,15 @@
   .notice p { margin: 0; flex: 1; }
   .notice b { display: block; }
 
+  .site-foot { text-align: center; color: var(--muted); font-size: .78rem; padding: 32px 0 0; }
+  .whats-new {
+    position: fixed; z-index: 7; left: 50%; transform: translateX(-50%);
+    top: max(12px, env(safe-area-inset-top)); width: min(520px, calc(100vw - 24px));
+    display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-size: .9rem;
+    animation: pop .25s ease;
+  }
+  .whats-new p { margin: 0; flex: 1; }
   .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
   .empty .big { font-size: 3rem; display: block; margin-bottom: 8px; }
 
@@ -462,7 +471,13 @@
       <ul id="accessList" class="access"></ul>
     </section>
   </section>
+  <footer class="site-foot" id="siteFoot"></footer>
 </main>
+
+<div id="whatsNew" class="whats-new" role="status" hidden>
+  <p><b id="whatsNewTitle"></b> <span id="whatsNewText"></span></p>
+  <button id="whatsNewOk" class="btn small" type="button">Got it</button>
+</div>
 
 <button id="addBtn" class="btn primary fab" type="button" hidden>＋ Add a wish</button>
 
@@ -566,6 +581,13 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 // Must match the owner emails in the database rules.
+// Bump with every change, and say what's new in a few words.
+const VERSION = {
+  number: '1.14',
+  date: 'Nov 13',
+  whatsNew: 'Version numbers. The page now says when it has changed.',
+};
+
 const OWNERS = ['lilialatona@gmail.com', 'latona@gmail.com'];
 // The list's owner never sees claims, so gifts stay a surprise.
 const SURPRISE_FOR = 'lilialatona@gmail.com';
@@ -671,6 +693,21 @@ if (window.visualViewport) {
   vv.addEventListener('scroll', lift);
   lift();
 }
+
+// ---------- version + what's new ----------
+document.getElementById('siteFoot').textContent = `Lilia's wish list · v${VERSION.number} · updated ${VERSION.date}`;
+(function whatsNew() {
+  let seen = null;
+  try { seen = localStorage.getItem('wishlist.version'); } catch (e) {}
+  const remember = () => { try { localStorage.setItem('wishlist.version', VERSION.number); } catch (e) {} };
+  if (!seen) return remember();          // first visit: nothing to announce
+  if (seen === VERSION.number) return;
+  document.getElementById('whatsNewTitle').textContent = `Updated to v${VERSION.number}:`;
+  document.getElementById('whatsNewText').textContent = VERSION.whatsNew;
+  const box = document.getElementById('whatsNew');
+  box.hidden = false;
+  document.getElementById('whatsNewOk').addEventListener('click', () => { box.hidden = true; remember(); });
+})();
 
 // Pause the snow once the header scrolls away.
 if ('IntersectionObserver' in window) {

@@ -583,9 +583,9 @@ const db = getDatabase(app);
 // Must match the owner emails in the database rules.
 // Bump with every change, and say what's new in a few words.
 const VERSION = {
-  number: '1.14',
-  date: 'Nov 13',
-  whatsNew: 'Version numbers. The page now says when it has changed.',
+  number: '1.15',
+  date: 'Nov 14',
+  whatsNew: 'Photos for some of Lilia’s new picks.',
 };
 
 const OWNERS = ['lilialatona@gmail.com', 'latona@gmail.com'];
@@ -1258,7 +1258,7 @@ $('profileForm').addEventListener('submit', async (e) => {
 // ---------- one-time batches from Lilia (her deck, then links she sends) ----------
 // Each batch file adds items and/or updates existing ones by title. An owner taps once to
 // apply it; profile/imported/<id> records that it's done so it never runs twice.
-const BATCHES = ['deck-2026.json', 'links-2026-11-13.json'];
+const BATCHES = ['deck-2026.json', 'links-2026-11-13.json', 'photos-2026-11-14.json'];
 const batchCache = {};
 async function loadBatch(file) {
   if (!batchCache[file]) batchCache[file] = fetch(file, { cache: 'no-store' }).then((r) => r.json());
@@ -1309,7 +1309,9 @@ $('importBtn').addEventListener('click', async () => {
       if (!hit) { missed.push(u.match); continue; }
       const patch = { ...u.set };
       if (patch.image) patch.image = img(patch.image);
-      await update(ref(db, `items/${hit[0]}`), { ...patch, updated: serverTimestamp() });
+      // Only flag "updated since you picked this" when something a buyer relies on changed.
+      const matters = ['title', 'url', 'price', 'notes'].some((k) => k in patch);
+      await update(ref(db, `items/${hit[0]}`), matters ? { ...patch, updated: serverTimestamp() } : patch);
     }
     const list = batch.items || [];
     const base = Date.now();

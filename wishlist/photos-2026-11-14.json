@@ -1,0 +1,10 @@
+{
+  "id": "photos20261114",
+  "title": "Photos for 3 of Lilia's new picks",
+  "blurb": "Her own deck photos for the Moroccanoil hairspray, Glossier You and the John Galt tank.",
+  "updates": [
+    { "match": "Moroccanoil Luminous Hairspray, strong finish", "set": { "image": "moroccanoil-hairspray" } },
+    { "match": "Glossier You eau de parfum", "set": { "image": "glossier-you" } },
+    { "match": "John Galt burgundy ribbed tank", "set": { "image": "john-galt-tank" } }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "links20261113",
+  "title": "Lilia's new links are ready",
+  "blurb": "12 specific products she picked, each in its section, an open idea for anything handmade, and the link for her Owala.",
+  "updates": [
+    {
+      "match": "Owala 34 oz water bottle",
+      "set": {
+        "title": "Owala FreeSip water bottle",
+        "url": "https://owalalife.com/products/freesip?Color=Blue+Steel&Material=Stainless+Steel&Size=32oz",
+        "notes": "She linked the 32 oz in Blue Steel. Also likes yellows and pinks"
+      }
+    }
+  ],
+  "items": [
+    { "category": "beauty", "title": "Moroccanoil Luminous Hairspray, strong finish", "url": "https://www.sephora.com/product/luminous-hairspray-strong-finish-P412092?skuId=2030542" },
+    { "category": "beauty", "title": "OUAI curl creme", "url": "https://www.sephora.com/product/ouai-haircare-curl-cream-P469822?skuId=2445237" },
+    { "category": "beauty", "title": "amika Power Hour curl refreshing spray", "url": "https://www.sephora.com/product/amika-power-hour-curl-refreshing-spray-P473260?skuId=2314631" },
+    { "category": "beauty", "title": "Glossier You eau de parfum", "url": "https://www.sephora.com/product/glossier-glossier-you-eau-de-parfum-P504364?skuId=2771533" },
+    { "category": "beauty", "title": "Rhode peptide lip tint", "url": "https://www.sephora.com/product/peptide-lip-tint-P517552?skuId=2895936" },
+
+    { "category": "clothes", "title": "Hollister Callie reversible cami", "url": "https://www.hollisterco.com/shop/us/p/hollister-callie-reversible-cami-62238319", "notes": "Size S" },
+    { "category": "clothes", "title": "John Galt burgundy ribbed tank", "url": "https://www.pacsun.com/john-galt/burgundy-ribbed-tank-top-0704601601796.html?dwvar_0704601601796_color=065", "notes": "Size S or M" },
+    { "category": "clothes", "title": "In Print We Trust Sandy classic tee", "url": "https://inprintwetrust.co/en-us/products/sandy-classic-tee?variant=45601311654087", "notes": "Size S" },
+
+    { "category": "misc", "title": "Ransom Note Sticker Book", "url": "https://www.amazon.com/dp/183776039X", "image": "journaling" },
+    { "category": "misc", "title": "Burgundy dotted journal", "url": "https://www.amazon.com/dp/B0HDCTJ6P9?th=1" },
+    { "category": "misc", "title": "Kendra Scott Elisa gold pendant necklace", "url": "https://www.kendrascott.com/jewelry/necklaces/elisa-gold-pendant-necklace/196088987347.html" },
+    { "category": "misc", "title": "John Galt striped cosmetic bag", "url": "https://www.pacsun.com/john-galt/blue-white-striped-cosmetic-bag-0679601600234.html?dwvar_0679601600234_color=997" },
+    { "category": "misc", "idea": true, "title": "Anything handmade, including cards" }
+  ]
+}

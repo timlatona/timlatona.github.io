@@ -1,0 +1,149 @@
+{
+  "id": "christmas2026",
+  "title": "Lilia's Christmas list is ready",
+  "blurb": "Photos for everything she linked, her really-want picks starred for Christmas, and 3 new things from her also-want slide.",
+  "updates": [
+    {
+      "match": "Moroccanoil Luminous Hairspray, strong finish",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/moroccanoil-hairspray"
+      }
+    },
+    {
+      "match": "OUAI curl creme",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/ouai-curl-creme"
+      }
+    },
+    {
+      "match": "Hollister Callie reversible cami",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/hollister-cami"
+      }
+    },
+    {
+      "match": "Owala FreeSip water bottle",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/owala"
+      }
+    },
+    {
+      "match": "John Galt burgundy ribbed tank",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/john-galt-tank"
+      }
+    },
+    {
+      "match": "Ransom Note Sticker Book",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/ransom-note"
+      }
+    },
+    {
+      "match": "Burgundy dotted journal",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/burgundy-journal"
+      }
+    },
+    {
+      "match": "In Print We Trust Sandy classic tee",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/ipwt-tee"
+      }
+    },
+    {
+      "match": "Glossier You eau de parfum",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/glossier-you"
+      }
+    },
+    {
+      "match": "Rhode peptide lip tint",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/rhode-lip-tint"
+      }
+    },
+    {
+      "match": "Kendra Scott Elisa gold pendant necklace",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/kendra-scott-necklace"
+      }
+    },
+    {
+      "match": "John Galt striped cosmetic bag",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/cosmetic-bag"
+      }
+    },
+    {
+      "match": "amika Power Hour curl refreshing spray",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "image": "xmas/amika"
+      }
+    },
+    {
+      "match": "Anything handmade, including cards",
+      "set": {
+        "top": true,
+        "occasion": "christmas"
+      }
+    },
+    {
+      "match": "Gift cards",
+      "set": {
+        "top": true,
+        "occasion": "christmas",
+        "notes": "Top picks for Christmas: Sephora, TJ Maxx, PacSun, Hollister. Also Aerie, Brandy Melville, Ulta, American Eagle, Target, Dick's, Amazon"
+      }
+    }
+  ],
+  "items": [
+    {
+      "category": "beauty",
+      "occasion": "christmas",
+      "title": "Phlur Body Mist Edit sampler set",
+      "url": "https://www.sephora.com/product/the-body-mist-edit-sampler-gift-set-P526060?skuId=3026515",
+      "image": "xmas/phlur-body-mist"
+    },
+    {
+      "category": "room",
+      "occasion": "christmas",
+      "title": "Vintage tennis racket for her room",
+      "url": "https://www.amazon.com/dp/B0GXHTT9P6",
+      "image": "xmas/tennis-racket"
+    },
+    {
+      "category": "beauty",
+      "occasion": "christmas",
+      "title": "Tangle Teezer detangling hairbrush",
+      "notes": "Pictured on her Christmas slide, no link",
+      "image": "xmas/tangle-teezer"
+    }
+  ]
+}

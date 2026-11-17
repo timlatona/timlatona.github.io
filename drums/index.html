@@ -1037,7 +1037,7 @@
       const load = document.createElement('button');
       load.className = 'load';
       const when = new Date(item.saved).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      load.innerHTML = `<span class="name"></span><span class="meta">${item.bpm} BPM · ${when}</span>`;
+      load.innerHTML = `<span class="name"></span><span class="meta">${Number(item.bpm) || 120} BPM · ${when}</span>`;
       load.querySelector('.name').textContent = item.name;
       load.addEventListener('click', async () => {
         try {

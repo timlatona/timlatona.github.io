@@ -14,14 +14,18 @@
     --panel: #212127;
     --step: #2e2e36;
     --step-beat: #3a3a44;
-    --on: #ff6a2b;
-    --on-glow: rgba(255,106,43,.55);
     --play: #f4f4f6;
     --text: #e8e8ec;
     --muted: #8a8a96;
     --gap: 6px;
     --group-gap: 12px;
+    --accent: #ff6a2b;
   }
+  /* each sound has its own color */
+  [data-voice="kick"]  { --on: #ff6a2b; --on-glow: rgba(255,106,43,.55); }
+  [data-voice="snare"] { --on: #4aa8ff; --on-glow: rgba(74,168,255,.55); }
+  [data-voice="hat"]   { --on: #f2c94c; --on-glow: rgba(242,201,76,.55); }
+
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body{ margin: 0; background: var(--bg); color: var(--text); }
   body{
@@ -36,7 +40,7 @@
 
   header{ display: flex; align-items: baseline; justify-content: space-between; }
   h1{ font-size: 18px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
-  .voice{ font-size: 13px; color: var(--muted); }
+  .subtitle{ font-size: 13px; color: var(--muted); }
 
   /* ---------- transport ---------- */
   .transport{
@@ -50,7 +54,7 @@
   button:active{ filter: brightness(1.3); }
   #play{
     width: 64px; height: 64px; border-radius: 50%;
-    background: var(--on); color: #111; display: grid; place-items: center;
+    background: var(--accent); color: #111; display: grid; place-items: center;
   }
   #play svg{ width: 26px; height: 26px; }
   .tempo{ display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -59,7 +63,23 @@
   .bpm-label{ font-size: 12px; color: var(--muted); margin-right: auto; }
   .tempo-row button{ height: 36px; min-width: 40px; padding: 0 10px; font-size: 16px; }
   #tap{ font-size: 13px; }
-  input[type=range]{ width: 100%; accent-color: var(--on); height: 28px; margin: 0; }
+  input[type=range]{ width: 100%; accent-color: var(--accent); height: 28px; margin: 0; }
+
+  /* ---------- sound tabs ---------- */
+  .tabs{
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    background: var(--panel); border-radius: 12px; padding: 5px;
+  }
+  .tab{
+    height: 40px; font-size: 14px; font-weight: 600; color: var(--muted);
+    background: transparent; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tab .dot{
+    width: 9px; height: 9px; border-radius: 50%; background: var(--on);
+    opacity: .3; transition: opacity .12s, transform .12s;
+  }
+  .tab.hit .dot{ opacity: 1; transform: scale(1.4); transition: none; }
+  .tab[aria-selected="true"]{ background: var(--step-beat); color: var(--text); box-shadow: inset 0 -2px 0 var(--on); }
 
   /* ---------- grid ---------- */
   .bars{ display: flex; flex-direction: column; gap: 14px; }
@@ -91,19 +111,22 @@
     .app{ gap: 10px; }
     .bars{ gap: 10px; }
   }
-  /* phone sideways: short screen — tighten so all 4 bars fit */
+  /* phone sideways: short screen — controls on the left, tabs up top */
   @media (orientation: landscape) and (max-height: 500px){
     body{ padding-top: max(8px, env(safe-area-inset-top)); }
     .app{ display: grid; grid-template-columns: 250px 1fr; align-items: start; max-width: none; }
+    header{ grid-column: 1; grid-row: 1; align-self: center; }
+    .subtitle{ display: none; }
+    .tabs{ grid-column: 2; grid-row: 1; padding: 3px; }
+    .tab{ height: 32px; }
+    .transport{ grid-column: 1; grid-row: 2; grid-template-columns: 1fr; justify-items: center; }
     .tempo-row{ flex-wrap: wrap; }
     .tempo-row button{ flex: 1; }
-    header{ grid-column: 1 / -1; }
-    .transport{ grid-template-columns: 1fr; justify-items: center; }
     .tempo{ width: 100%; }
-    .bars{ gap: 6px; }
+    .bars{ grid-column: 2; grid-row: 2 / span 2; gap: 6px; }
     .steps{ --gap: 4px; --group-gap: 8px; }
-    .step{ aspect-ratio: auto; height: min(calc((100dvh - 90px) / 4 - 6px), 48px); }
-    .footer{ grid-column: 1; justify-content: center; }
+    .step{ aspect-ratio: auto; height: min(calc((100dvh - 120px) / 4 - 6px), 48px); }
+    .footer{ grid-column: 1; grid-row: 3; justify-content: center; }
   }
 </style>
 </head>
@@ -111,7 +134,7 @@
 <div class="app">
   <header>
     <h1>Drum Machine</h1>
-    <span class="voice">Kick · 4 bars · 16ths</span>
+    <span class="subtitle" id="subtitle">Kick · 4 bars · 16ths</span>
   </header>
 
   <section class="transport">
@@ -130,28 +153,58 @@
     </div>
   </section>
 
-  <section class="bars" id="bars"></section>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
 
-  <div class="footer"><button id="clear">Clear</button></div>
+  <section class="bars" id="bars" data-voice="kick"></section>
+
+  <div class="footer"><button id="clear">Clear Kick</button></div>
 </div>
 
 <script>
 (() => {
   const STEPS = 64, PER_BAR = 16;
-  const pattern = new Array(STEPS).fill(false);
-  // start with four-on-the-floor so Play does something right away
-  for (let i = 0; i < STEPS; i += 4) pattern[i] = true;
+  const VOICES = [
+    { id: 'kick',  name: 'Kick' },
+    { id: 'snare', name: 'Snare' },
+    { id: 'hat',   name: 'Hi-hat' },
+  ];
 
+  // one 64-step pattern per sound; start with a basic beat so Play does something
+  const patterns = {};
+  VOICES.forEach(v => patterns[v.id] = new Array(STEPS).fill(false));
+  for (let i = 0; i < STEPS; i++) {
+    const s = i % PER_BAR;
+    if (s % 4 === 0) patterns.kick[i] = true;          // every beat
+    if (s === 4 || s === 12) patterns.snare[i] = true; // beats 2 and 4
+    if (s % 2 === 0) patterns.hat[i] = true;           // 8th notes
+  }
+
+  let current = 'kick';
   let bpm = 120;
-  let ctx = null;
+  let ctx = null, noiseBuf = null;
   let playing = false;
   let currentStep = 0;      // next step to schedule
   let nextTime = 0;         // audio-clock time of next step
   let timer = null;
-  const queue = [];         // {step, time} for drawing the playhead
+  const queue = [];         // {step, time, hits} for drawing
   let shownStep = -1;
 
-  // ---------- build grid ----------
+  // ---------- tabs ----------
+  const tabsEl = document.getElementById('tabs');
+  const tabEls = {};
+  VOICES.forEach(v => {
+    const t = document.createElement('button');
+    t.className = 'tab';
+    t.dataset.voice = v.id;
+    t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', v.id === current);
+    t.innerHTML = `<span class="dot"></span>${v.name}`;
+    t.addEventListener('click', () => selectVoice(v.id));
+    tabsEl.appendChild(t);
+    tabEls[v.id] = t;
+  });
+
+  // ---------- grid (one set of buttons, shows the selected sound) ----------
   const barsEl = document.getElementById('bars');
   const stepEls = [];
   for (let b = 0; b < 4; b++) {
@@ -166,9 +219,8 @@
       for (let s = 0; s < 4; s++) {
         const i = b * PER_BAR + g * 4 + s;
         const el = document.createElement('button');
-        el.className = 'step' + (s === 0 ? ' beat' : '') + (pattern[i] ? ' on' : '');
+        el.className = 'step' + (s === 0 ? ' beat' : '');
         el.setAttribute('aria-label', `Bar ${b + 1}, beat ${g + 1}, step ${s + 1}`);
-        el.setAttribute('aria-pressed', pattern[i]);
         el.addEventListener('pointerdown', e => { e.preventDefault(); toggle(i); });
         el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(i); } });
         stepEls.push(el);
@@ -180,12 +232,31 @@
     barsEl.appendChild(bar);
   }
 
+  function render() {
+    const p = patterns[current];
+    stepEls.forEach((el, i) => {
+      el.classList.toggle('on', p[i]);
+      el.setAttribute('aria-pressed', p[i]);
+    });
+  }
+
+  function selectVoice(id) {
+    current = id;
+    const name = VOICES.find(v => v.id === id).name;
+    barsEl.dataset.voice = id;
+    VOICES.forEach(v => tabEls[v.id].setAttribute('aria-selected', v.id === id));
+    document.getElementById('subtitle').textContent = `${name} · 4 bars · 16ths`;
+    document.getElementById('clear').textContent = `Clear ${name}`;
+    render();
+  }
+
   function toggle(i) {
-    pattern[i] = !pattern[i];
-    stepEls[i].classList.toggle('on', pattern[i]);
-    stepEls[i].setAttribute('aria-pressed', pattern[i]);
+    const p = patterns[current];
+    p[i] = !p[i];
+    stepEls[i].classList.toggle('on', p[i]);
+    stepEls[i].setAttribute('aria-pressed', p[i]);
     // audition the sound when turning a step on while stopped
-    if (pattern[i] && !playing) { ensureAudio(); kick(ctx.currentTime); }
+    if (p[i] && !playing) { ensureAudio(); SOUNDS[current](ctx.currentTime); }
   }
 
   // ---------- audio ----------
@@ -194,40 +265,65 @@
       // iOS 17+: play even when the ringer/silent switch is on
       try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
       ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // one second of white noise, reused by snare and hi-hat
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
     if (ctx.state === 'suspended') ctx.resume();
   }
 
-  // Synthesized kick: a sine that sweeps down in pitch + a short click
-  function kick(t) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-    osc.frequency.exponentialRampToValueAtTime(38, t + 0.45);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(1, t + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.55);
-
-    const click = ctx.createOscillator();
-    const cg = ctx.createGain();
-    click.type = 'triangle';
-    click.frequency.setValueAtTime(1200, t);
-    cg.gain.setValueAtTime(0.25, t);
-    cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
-    click.connect(cg).connect(ctx.destination);
-    click.start(t); click.stop(t + 0.02);
+  function noise(t, dur, filterType, freq, level) {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = filterType; f.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t + dur + 0.02);
   }
+
+  function tone(t, type, f0, f1, sweep, dur, level) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + sweep);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(level, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  const SOUNDS = {
+    // sine that sweeps down in pitch + short click
+    kick(t) {
+      tone(t, 'sine', 150, 42, 0.14, 0.5, 1);
+      tone(t, 'triangle', 1200, 1200, 0.01, 0.012, 0.25);
+    },
+    // noise "snap" + a short body tone
+    snare(t) {
+      noise(t, 0.2, 'highpass', 1200, 0.7);
+      tone(t, 'triangle', 220, 160, 0.08, 0.12, 0.5);
+    },
+    // short, bright, high-passed noise (closed hat)
+    hat(t) {
+      noise(t, 0.05, 'highpass', 7000, 0.45);
+    },
+  };
 
   // ---------- scheduler (look ahead, book hits on the audio clock) ----------
   const LOOKAHEAD_MS = 25, SCHEDULE_AHEAD = 0.1;
   function scheduler() {
     while (nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
-      if (pattern[currentStep]) kick(nextTime);
-      queue.push({ step: currentStep, time: nextTime });
+      const hits = [];
+      VOICES.forEach(v => {
+        if (patterns[v.id][currentStep]) { SOUNDS[v.id](nextTime); hits.push(v.id); }
+      });
+      queue.push({ step: currentStep, time: nextTime, hits });
       nextTime += 60 / bpm / 4;               // one 16th note
       currentStep = (currentStep + 1) % STEPS;
     }
@@ -236,12 +332,14 @@
   function draw() {
     if (!playing) return;
     const now = ctx.currentTime;
-    let step = shownStep;
-    while (queue.length && queue[0].time <= now) step = queue.shift().step;
-    if (step !== shownStep) {
+    let item = null;
+    while (queue.length && queue[0].time <= now) item = queue.shift();
+    if (item && item.step !== shownStep) {
       if (shownStep >= 0) stepEls[shownStep].classList.remove('now');
-      stepEls[step].classList.add('now');
-      shownStep = step;
+      stepEls[item.step].classList.add('now');
+      shownStep = item.step;
+      // flash the dot on each tab whose sound just played
+      VOICES.forEach(v => tabEls[v.id].classList.toggle('hit', item.hits.includes(v.id)));
     }
     requestAnimationFrame(draw);
   }
@@ -265,12 +363,13 @@
     clearInterval(timer);
     if (shownStep >= 0) stepEls[shownStep].classList.remove('now');
     shownStep = -1;
+    VOICES.forEach(v => tabEls[v.id].classList.remove('hit'));
     icon.setAttribute('d', 'M7 4l13 8-13 8z');
     playBtn.setAttribute('aria-label', 'Play');
   }
   playBtn.addEventListener('click', () => playing ? stop() : start());
   document.addEventListener('keydown', e => {
-    if (e.code === 'Space' && !e.target.classList.contains('step')) { e.preventDefault(); playing ? stop() : start(); }
+    if (e.code === 'Space' && !e.target.closest('button')) { e.preventDefault(); playing ? stop() : start(); }
   });
 
   // ---------- tempo ----------
@@ -297,10 +396,13 @@
     }
   });
 
+  // clears only the sound you're looking at
   document.getElementById('clear').addEventListener('click', () => {
-    pattern.fill(false);
-    stepEls.forEach(el => { el.classList.remove('on'); el.setAttribute('aria-pressed', false); });
+    patterns[current].fill(false);
+    render();
   });
+
+  render();
 })();
 </script>
 </body>

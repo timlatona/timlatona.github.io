@@ -40,7 +40,37 @@
 
   header{ display: flex; align-items: baseline; justify-content: space-between; }
   h1{ font-size: 18px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
-  .subtitle{ font-size: 13px; color: var(--muted); }
+  header{ align-items: center; }
+  .actions{ display: flex; gap: 6px; }
+  .actions button{ height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; }
+
+  /* toast message */
+  .toast{
+    position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top));
+    transform: translate(-50%, -20px); opacity: 0; pointer-events: none;
+    background: var(--text); color: #111; font-size: 14px; font-weight: 600;
+    padding: 10px 16px; border-radius: 999px; transition: opacity .2s, transform .2s; z-index: 20;
+    max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show{ opacity: 1; transform: translate(-50%, 0); }
+
+  /* my beats */
+  .save-row{ display: flex; gap: 8px; }
+  .save-row input{
+    flex: 1; min-width: 0; height: 44px; border-radius: 10px; border: 0; padding: 0 12px;
+    background: var(--step); color: var(--text); font: inherit; font-size: 16px;
+  }
+  .save-row button{ height: 44px; padding: 0 16px; font-weight: 600; background: var(--accent); color: #111; }
+  .beat-list{ display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
+  .beat-item{ display: flex; gap: 6px; }
+  .beat-item .load{
+    flex: 1; min-width: 0; text-align: left; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .beat-item .name{ font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .beat-item .meta{ font-size: 12px; color: var(--muted); }
+  .beat-item .del{ width: 44px; color: var(--muted); font-size: 16px; }
+  .empty{ font-size: 14px; color: var(--muted); padding: 8px 0; }
 
   /* ---------- transport ---------- */
   .transport{
@@ -199,10 +229,12 @@
   @media (orientation: landscape) and (max-height: 500px){
     body{ padding-top: max(8px, env(safe-area-inset-top)); }
     .app{ display: grid; grid-template-columns: 250px 1fr; align-items: start; max-width: none; }
-    header{ display: none; }
+    header{ display: contents; }
+    header h1{ display: none; }
+    .actions{ grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+    .actions button{ height: 32px; padding: 0 10px; }
     .mix{ grid-column: 1; grid-row: 1; align-self: center; padding: 0; }
-    .subtitle{ display: none; }
-    .tabs{ grid-column: 2; grid-row: 1; padding: 3px; }
+    .tabs{ grid-column: 2; grid-row: 1; padding: 3px; margin-right: 170px; }
     .tab{ height: 32px; }
     .transport{ grid-column: 1; grid-row: 2; grid-template-columns: 1fr; justify-items: center; }
     .tempo-row{ flex-wrap: wrap; }
@@ -221,7 +253,10 @@
 <div class="app">
   <header>
     <h1>Drum Machine</h1>
-    <span class="subtitle" id="subtitle">Kick · 4 bars · 16ths</span>
+    <div class="actions">
+      <button id="share">⤴ Share</button>
+      <button id="beats">♫ My beats</button>
+    </div>
   </header>
 
   <section class="transport">
@@ -342,6 +377,16 @@
     </details>
 
     <details>
+      <summary><span class="ico">⤴</span>Sharing &amp; saving beats</summary>
+      <div class="body">
+        <p><b>The link is the beat.</b> Every change you make updates the page address, and the beat, tempo and drum volumes are all packed into the link. Anyone who opens it hears exactly what you made. Nothing is uploaded anywhere.</p>
+        <p><b>⤴ Share</b> opens your phone's share menu (Messages, etc.) with the link, or copies it on a computer. A shared link is a snapshot: if you change the beat afterwards, share again.</p>
+        <p><b>♫ My beats</b> saves the current beat with a name on this phone. Tap a saved beat to load it, or <b>✕</b> to delete it. Saved beats live in this browser on this device only. Share a link to move one to another device.</p>
+        <p>Loading a beat can be undone with <b>Undo</b>.</p>
+      </div>
+    </details>
+
+    <details>
       <summary><span class="ico">📱</span>iPhone tips</summary>
       <div class="body">
         <ul>
@@ -349,12 +394,25 @@
           <li>Leaving the page (home screen, lock, another app) stops the beat. Tap Play when you come back.</li>
           <li>Turn the phone sideways to see all 4 bars at once.</li>
           <li>To make it feel like an app, tap <b>Share → Add to Home Screen</b> in Safari.</li>
-          <li>Your pattern isn't saved yet, so reloading the page starts fresh.</li>
+          <li>On iPhone, saved beats are safest if you use the Home Screen version.</li>
         </ul>
       </div>
     </details>
   </section>
 </div>
+
+<div class="sheet-bg" id="beats-bg">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="My beats">
+    <h2>My beats</h2>
+    <div class="save-row">
+      <input id="beat-name" type="text" placeholder="Name this beat" maxlength="40" enterkeyhint="done">
+      <button id="save-beat">Save</button>
+    </div>
+    <div class="beat-list" id="beat-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
 
 <div class="sheet-bg" id="sheet-bg">
   <div class="sheet" id="sheet" role="dialog" aria-modal="true">
@@ -462,6 +520,7 @@
   }
   function render() {
     stepEls.forEach((el, i) => paintStep(i));
+    changed();
   }
 
   function selectVoice(id) {
@@ -469,7 +528,6 @@
     const name = VOICES.find(v => v.id === id).name;
     barsEl.dataset.voice = id;
     VOICES.forEach(v => tabEls[v.id].setAttribute('aria-selected', v.id === id));
-    document.getElementById('subtitle').textContent = `${name} · 4 bars · 16ths`;
     mixEl.dataset.voice = id;
     document.getElementById('mix-label').textContent = `${name} volume`;
     mixSlider.value = mix[id];
@@ -483,6 +541,7 @@
     const p = patterns[current];
     p[i] = p[i] === 0 ? 1 : (p[i] % 4) + 1;
     paintStep(i);
+    changed();
     // audition the sound at that volume while stopped
     if (!playing) { ensureAudio(); trigger(current, ctx.currentTime, p[i]); }
   }
@@ -492,6 +551,7 @@
     saveUndo();
     patterns[current][i] = 0;
     paintStep(i);
+    changed();
   }
 
   const HOLD_MS = 400;
@@ -678,6 +738,7 @@
     bpm = Math.max(40, Math.min(240, Math.round(v)));
     bpmEl.textContent = bpm;
     slider.value = bpm;
+    changed();
   }
   slider.addEventListener('input', () => setBpm(+slider.value));
   document.getElementById('minus').addEventListener('click', () => setBpm(bpm - 1));
@@ -699,8 +760,8 @@
   const undoStack = [];
   const undoBtn = document.getElementById('undo');
   function saveUndo() {
-    const snap = {};
-    VOICES.forEach(v => snap[v.id] = patterns[v.id].slice());
+    const snap = { bpm, mix: { ...mix }, p: {} };
+    VOICES.forEach(v => snap.p[v.id] = patterns[v.id].slice());
     undoStack.push(snap);
     if (undoStack.length > 50) undoStack.shift();
     undoBtn.disabled = false;
@@ -708,9 +769,10 @@
   undoBtn.addEventListener('click', () => {
     const snap = undoStack.pop();
     if (!snap) return;
-    VOICES.forEach(v => patterns[v.id] = snap[v.id]);
+    VOICES.forEach(v => { patterns[v.id] = snap.p[v.id]; mix[v.id] = snap.mix[v.id]; applyMix(v.id); });
+    setBpm(snap.bpm);
     undoBtn.disabled = !undoStack.length;
-    render();
+    selectVoice(current);
   });
 
   // ---------- randomize (musical, not pure noise) ----------
@@ -788,8 +850,9 @@
     copyRow.appendChild(all);
     sheetBg.classList.add('open');
   }
-  function closeSheet() { sheetBg.classList.remove('open'); }
-  sheetBg.addEventListener('click', e => { if (e.target === sheetBg) closeSheet(); });
+  function closeSheet() { document.querySelectorAll('.sheet-bg.open').forEach(el => el.classList.remove('open')); }
+  document.querySelectorAll('.sheet-bg').forEach(bg =>
+    bg.addEventListener('click', e => { if (e.target === bg) closeSheet(); }));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
   document.getElementById('bar-random').addEventListener('click', () => {
     saveUndo();
@@ -813,10 +876,220 @@
   mixSlider.addEventListener('input', () => {
     mix[current] = +mixSlider.value;
     mixVal.textContent = mix[current];
-    if (ctx && buses[current]) buses[current].gain.setTargetAtTime(mixGain(mix[current]), ctx.currentTime, 0.01);
+    applyMix(current);
+    changed();
+  });
+  function applyMix(id) {
+    if (ctx && buses[id]) buses[id].gain.setTargetAtTime(mixGain(mix[id]), ctx.currentTime, 0.01);
+  }
+
+  // =====================================================================
+  // Saving & sharing
+  //
+  // A beat is described as plain data (below). That same description is what
+  // goes into links and saved beats, and could go into a database later.
+  //   { v: 1, bpm: 120,
+  //     tr: [ { s: "kick", vol: 100, p: "1000100010001000…" }, … ] }
+  // p = one character per step: 0 = off, 1 = loud … 4 = barely there.
+  // New features (more sounds, flams, rolls…) get new optional fields and a
+  // higher v; older links keep loading because missing fields use defaults.
+  //
+  // Link format:  #z.<compressed, base64url>   (or #j.<plain> if the browser
+  // can't compress). Everything after # stays in the browser — nothing is
+  // sent to a server.
+  // =====================================================================
+  var ready = false, linkTimer = null, linkJob = Promise.resolve();
+
+  function getState() {
+    return {
+      v: 1, bpm,
+      tr: VOICES.map(v => ({ s: v.id, vol: mix[v.id], p: patterns[v.id].join('') })),
+    };
+  }
+  function applyState(st) {
+    if (!st || typeof st !== 'object') throw new Error('bad beat');
+    if (st.v > 1) toast('This beat was made with a newer version; some parts may be missing');
+    const tracks = Array.isArray(st.tr) ? st.tr : [];
+    VOICES.forEach(v => {
+      const t = tracks.find(x => x && x.s === v.id);
+      const p = new Array(STEPS).fill(0);
+      if (t && typeof t.p === 'string') {
+        for (let i = 0; i < STEPS && i < t.p.length; i++) {
+          const n = +t.p[i];
+          p[i] = n >= 0 && n <= 4 ? n : 0;
+        }
+      }
+      patterns[v.id] = p;
+      mix[v.id] = t && Number.isFinite(t.vol) ? Math.max(0, Math.min(100, t.vol)) : 100;
+      applyMix(v.id);
+    });
+    setBpm(Number.isFinite(st.bpm) ? st.bpm : 120);
+    selectVoice(current);
+  }
+
+  const b64 = bytes => {
+    let s = '';
+    bytes.forEach(b => s += String.fromCharCode(b));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const unb64 = str => {
+    const s = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(s, c => c.charCodeAt(0));
+  };
+  async function pipe(bytes, stream) {
+    const out = new Response(new Blob([bytes]).stream().pipeThrough(stream));
+    return new Uint8Array(await out.arrayBuffer());
+  }
+  async function encodeBeat(st) {
+    const raw = new TextEncoder().encode(JSON.stringify(st));
+    if (window.CompressionStream) {
+      try { return 'z.' + b64(await pipe(raw, new CompressionStream('deflate-raw'))); } catch (e) {}
+    }
+    return 'j.' + b64(raw);
+  }
+  async function decodeBeat(code) {
+    const dot = code.indexOf('.');
+    const kind = code.slice(0, dot), data = code.slice(dot + 1);
+    let raw = unb64(data);
+    if (kind === 'z') raw = await pipe(raw, new DecompressionStream('deflate-raw'));
+    else if (kind !== 'j') throw new Error('unknown link');
+    return JSON.parse(new TextDecoder().decode(raw));
+  }
+
+  // keep the address bar in sync with the beat (shortly after each change)
+  function changed() {
+    if (!ready) return;
+    clearTimeout(linkTimer);
+    linkTimer = setTimeout(updateLink, 250);
+  }
+  function updateLink() {
+    linkTimer = null;
+    linkJob = encodeBeat(getState()).then(code => {
+      history.replaceState(null, '', '#' + code);
+    }).catch(() => {});
+    return linkJob;
+  }
+  async function currentLink() {
+    if (linkTimer) { clearTimeout(linkTimer); await updateLink(); }
+    else await linkJob;
+    return location.href;
+  }
+
+  async function loadFromHash() {
+    const code = location.hash.slice(1);
+    if (!code) return false;
+    try {
+      const st = await decodeBeat(code);
+      saveUndo();
+      applyState(st);
+      return true;
+    } catch (e) {
+      toast("Couldn't open that beat link");
+      return false;
+    }
+  }
+  window.addEventListener('hashchange', loadFromHash);   // a beat link pasted into an open page
+
+  // ---------- toast ----------
+  let toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ---------- share ----------
+  document.getElementById('share').addEventListener('click', async () => {
+    const url = await currentLink();
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Drum beat', url }); } catch (e) {}
+      return;
+    }
+    try { await navigator.clipboard.writeText(url); toast('Link copied'); }
+    catch (e) { prompt('Copy this link:', url); }
   });
 
+  // ---------- my beats (saved in this browser) ----------
+  const STORE_KEY = 'drums.beats.v1';
+  function loadBeats() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch (e) { return []; }
+  }
+  function storeBeats(list) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); return true; }
+    catch (e) { toast("Couldn't save on this device"); return false; }
+  }
+  const beatsBg = document.getElementById('beats-bg');
+  const nameInput = document.getElementById('beat-name');
+  const listEl = document.getElementById('beat-list');
+
+  function drawBeatList() {
+    const list = loadBeats();
+    listEl.innerHTML = '';
+    if (!list.length) {
+      listEl.innerHTML = '<div class="empty">No saved beats yet. Name this one and tap Save.</div>';
+      return;
+    }
+    list.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'beat-item';
+      const load = document.createElement('button');
+      load.className = 'load';
+      const when = new Date(item.saved).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      load.innerHTML = `<span class="name"></span><span class="meta">${Number(item.bpm) || 120} BPM · ${when}</span>`;
+      load.querySelector('.name').textContent = item.name;
+      load.addEventListener('click', async () => {
+        try {
+          const st = await decodeBeat(item.code);
+          saveUndo();
+          applyState(st);
+          closeSheet();
+          toast(`Loaded “${item.name}”`);
+        } catch (e) { toast("Couldn't load that beat"); }
+      });
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', `Delete ${item.name}`);
+      del.addEventListener('click', () => {
+        if (!confirm(`Delete “${item.name}”?`)) return;
+        storeBeats(loadBeats().filter(b => b.id !== item.id));
+        drawBeatList();
+      });
+      row.append(load, del);
+      listEl.appendChild(row);
+    });
+  }
+  document.getElementById('beats').addEventListener('click', () => {
+    nameInput.value = '';
+    nameInput.placeholder = `Beat ${loadBeats().length + 1}`;
+    drawBeatList();
+    beatsBg.classList.add('open');
+  });
+  async function saveBeat() {
+    const name = nameInput.value.trim() || nameInput.placeholder;
+    const code = await encodeBeat(getState());
+    const list = loadBeats();
+    list.unshift({ id: Date.now().toString(36), name, code, bpm, saved: Date.now() });
+    if (storeBeats(list)) {
+      nameInput.value = '';
+      nameInput.placeholder = `Beat ${list.length + 1}`;
+      nameInput.blur();
+      drawBeatList();
+      toast(`Saved “${name}”`);
+    }
+  }
+  document.getElementById('save-beat').addEventListener('click', saveBeat);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveBeat(); });
+
+  // ---------- start up ----------
   render();
+  loadFromHash().then(() => {
+    undoStack.length = 0;            // opening a link isn't something to undo
+    undoBtn.disabled = true;
+    ready = true;
+  });
 })();
 </script>
 </body>

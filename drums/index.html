@@ -84,7 +84,11 @@
   /* ---------- grid ---------- */
   .bars{ display: flex; flex-direction: column; gap: 14px; }
   .bar{ display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
-  .bar-num{ font-size: 12px; color: var(--muted); padding-top: 4px; text-align: center; }
+  .bar-num{
+    font-size: 12px; color: var(--muted); text-align: center;
+    width: 22px; height: 28px; padding: 0; background: transparent; border-radius: 6px;
+  }
+  .bar-num::after{ content: "⋯"; display: block; font-size: 10px; line-height: 6px; opacity: .7; }
   .steps{
     display: grid;
     /* portrait: 2 rows of 8 per bar */
@@ -102,8 +106,35 @@
   .step.now{ outline: 2px solid var(--play); outline-offset: -2px; }
   .step.now.on{ transform: scale(.92); }
 
-  .footer{ display: flex; justify-content: flex-end; }
-  #clear{ padding: 8px 14px; font-size: 13px; color: var(--muted); }
+  .footer{ display: flex; gap: 8px; justify-content: flex-end; }
+  .footer button{ padding: 9px 14px; font-size: 13px; color: var(--text); }
+  .footer button:disabled{ opacity: .35; cursor: default; }
+  #clear{ color: var(--muted); }
+
+  /* ---------- bar menu (bottom sheet) ---------- */
+  .sheet-bg{
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: none; align-items: flex-end; justify-content: center; z-index: 10;
+  }
+  .sheet-bg.open{ display: flex; }
+  .sheet{
+    width: 100%; max-width: 480px; background: var(--panel);
+    border-radius: 16px 16px 0 0; padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .sheet h2{ margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .sheet h2 .dot{ width: 9px; height: 9px; border-radius: 50%; background: var(--on); }
+  .sheet .label{ font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .sheet .row{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sheet .row button{ height: 44px; font-size: 15px; }
+  .sheet .row button:disabled{ opacity: .3; }
+  .sheet .two{ grid-template-columns: 1fr 1fr; }
+  .sheet label.all{ display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .sheet label.all input{ width: 20px; height: 20px; accent-color: var(--on); }
+  @media (orientation: landscape) and (max-height: 500px){
+    .sheet{ border-radius: 16px; margin-bottom: 8px; gap: 8px; padding: 12px 16px; }
+    .sheet .row button{ height: 36px; }
+  }
 
   /* sideways / wide: one row of 16 per bar */
   @media (orientation: landscape) and (min-width: 600px), (min-width: 760px){
@@ -127,6 +158,7 @@
     .steps{ --gap: 4px; --group-gap: 8px; }
     .step{ aspect-ratio: auto; height: min(calc((100dvh - 120px) / 4 - 6px), 48px); }
     .footer{ grid-column: 1; grid-row: 3; justify-content: center; }
+    .footer button{ padding: 8px 10px; }
   }
 </style>
 </head>
@@ -157,7 +189,24 @@
 
   <section class="bars" id="bars" data-voice="kick"></section>
 
-  <div class="footer"><button id="clear">Clear Kick</button></div>
+  <div class="footer">
+    <button id="undo" disabled>↶ Undo</button>
+    <button id="random">🎲 Random</button>
+    <button id="clear">Clear</button>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheet-bg">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+    <h2 id="sheet-title"><span class="dot"></span><span></span></h2>
+    <div class="label">Copy this bar to</div>
+    <div class="row" id="copy-row"></div>
+    <label class="all"><input type="checkbox" id="all-sounds"> All sounds (kick, snare and hi-hat)</label>
+    <div class="row two">
+      <button id="bar-random">🎲 Random bar</button>
+      <button id="bar-clear">Clear bar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -210,7 +259,12 @@
   for (let b = 0; b < 4; b++) {
     const bar = document.createElement('div');
     bar.className = 'bar';
-    bar.innerHTML = `<div class="bar-num">${b + 1}</div>`;
+    const num = document.createElement('button');
+    num.className = 'bar-num';
+    num.textContent = b + 1;
+    num.setAttribute('aria-label', `Bar ${b + 1} options`);
+    num.addEventListener('click', () => openSheet(b));
+    bar.appendChild(num);
     const steps = document.createElement('div');
     steps.className = 'steps';
     for (let g = 0; g < 4; g++) {
@@ -246,11 +300,11 @@
     barsEl.dataset.voice = id;
     VOICES.forEach(v => tabEls[v.id].setAttribute('aria-selected', v.id === id));
     document.getElementById('subtitle').textContent = `${name} · 4 bars · 16ths`;
-    document.getElementById('clear').textContent = `Clear ${name}`;
     render();
   }
 
   function toggle(i) {
+    saveUndo();
     const p = patterns[current];
     p[i] = !p[i];
     stepEls[i].classList.toggle('on', p[i]);
@@ -396,10 +450,107 @@
     }
   });
 
+  // ---------- undo ----------
+  const undoStack = [];
+  const undoBtn = document.getElementById('undo');
+  function saveUndo() {
+    const snap = {};
+    VOICES.forEach(v => snap[v.id] = patterns[v.id].slice());
+    undoStack.push(snap);
+    if (undoStack.length > 50) undoStack.shift();
+    undoBtn.disabled = false;
+  }
+  undoBtn.addEventListener('click', () => {
+    const snap = undoStack.pop();
+    if (!snap) return;
+    VOICES.forEach(v => patterns[v.id] = snap[v.id]);
+    undoBtn.disabled = !undoStack.length;
+    render();
+  });
+
+  // ---------- randomize (musical, not pure noise) ----------
+  // chance of a hit at each of the 16 positions in a bar
+  const ODDS = {
+    //      1    e    &    a    2    e    &    a    3    e    &    a    4    e    &    a
+    kick:  [.95, .08, .25, .12, .25, .08, .20, .15, .70, .08, .30, .12, .25, .08, .20, .10],
+    snare: [  0, .04, .04, .08, .92, .06, .04, .12,   0, .04, .06, .10, .92, .08, .12, .18],
+    hat:   [.90, .30, .85, .30, .90, .30, .85, .30, .90, .30, .85, .30, .90, .30, .85, .40],
+  };
+  function randomBar(voice) {
+    return ODDS[voice].map(p => Math.random() < p);
+  }
+  // bars 2–4 repeat bar 1 with small changes, so it sounds like a groove;
+  // bar 4 changes a bit more, like a fill
+  function randomize(voice) {
+    const base = randomBar(voice);
+    for (let b = 0; b < 4; b++) {
+      const amount = b === 0 ? 0 : b === 3 ? 0.25 : 0.08;
+      const fresh = randomBar(voice);
+      for (let s = 0; s < PER_BAR; s++) {
+        patterns[voice][b * PER_BAR + s] = Math.random() < amount ? fresh[s] : base[s];
+      }
+    }
+  }
+  document.getElementById('random').addEventListener('click', () => {
+    saveUndo();
+    randomize(current);
+    render();
+  });
+
   // clears only the sound you're looking at
   document.getElementById('clear').addEventListener('click', () => {
+    saveUndo();
     patterns[current].fill(false);
     render();
+  });
+
+  // ---------- bar menu ----------
+  const sheetBg = document.getElementById('sheet-bg');
+  const copyRow = document.getElementById('copy-row');
+  const allSounds = document.getElementById('all-sounds');
+  let sheetBar = 0;
+  function voicesFor() { return allSounds.checked ? VOICES.map(v => v.id) : [current]; }
+  function copyBar(from, targets) {
+    saveUndo();
+    voicesFor().forEach(v => targets.forEach(t => {
+      for (let s = 0; s < PER_BAR; s++) patterns[v][t * PER_BAR + s] = patterns[v][from * PER_BAR + s];
+    }));
+    render(); closeSheet();
+  }
+  function openSheet(b) {
+    sheetBar = b;
+    const name = VOICES.find(v => v.id === current).name;
+    document.getElementById('sheet').dataset.voice = current;
+    document.querySelector('#sheet-title span:last-child').textContent = `Bar ${b + 1} · ${name}`;
+    copyRow.innerHTML = '';
+    [0, 1, 2, 3].forEach(t => {
+      if (t === b) return;
+      const btn = document.createElement('button');
+      btn.textContent = `Bar ${t + 1}`;
+      btn.addEventListener('click', () => copyBar(b, [t]));
+      copyRow.appendChild(btn);
+    });
+    const all = document.createElement('button');
+    all.textContent = 'All';
+    all.addEventListener('click', () => copyBar(b, [0, 1, 2, 3].filter(t => t !== b)));
+    copyRow.appendChild(all);
+    sheetBg.classList.add('open');
+  }
+  function closeSheet() { sheetBg.classList.remove('open'); }
+  sheetBg.addEventListener('click', e => { if (e.target === sheetBg) closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+  document.getElementById('bar-random').addEventListener('click', () => {
+    saveUndo();
+    voicesFor().forEach(v => {
+      const bar = randomBar(v);
+      for (let s = 0; s < PER_BAR; s++) patterns[v][sheetBar * PER_BAR + s] = bar[s];
+    });
+    render(); closeSheet();
+  });
+  document.getElementById('bar-clear').addEventListener('click', () => {
+    saveUndo();
+    voicesFor().forEach(v => patterns[v].fill(false, sheetBar * PER_BAR, (sheetBar + 1) * PER_BAR));
+    render(); closeSheet();
   });
 
   render();

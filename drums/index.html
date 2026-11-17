@@ -158,6 +158,37 @@
     .sheet .row button{ height: 36px; }
   }
 
+  /* ---------- how to use ---------- */
+  .help{ margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .help h2{ font-size: 13px; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .help details{ background: var(--panel); border-radius: 12px; }
+  .help summary{
+    list-style: none; cursor: pointer; padding: 13px 14px;
+    display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600;
+  }
+  .help summary::-webkit-details-marker{ display: none; }
+  .help summary .ico{ width: 22px; text-align: center; flex: none; }
+  .help summary::after{
+    content: "›"; margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1;
+    transition: transform .15s;
+  }
+  .help details[open] summary::after{ transform: rotate(90deg); }
+  .help .body{ padding: 0 14px 14px 46px; font-size: 14px; line-height: 1.5; color: #c9c9d1; }
+  .help .body p{ margin: 0 0 8px; }
+  .help .body p:last-child{ margin: 0; }
+  .help .body ul{ margin: 0 0 8px; padding-left: 18px; }
+  .help .body li{ margin: 2px 0; }
+  .help b{ color: var(--text); }
+  .help .meter{ display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 6px; }
+  .help .meter i{
+    width: 14px; height: 14px; border-radius: 3px; background: var(--step);
+    position: relative; overflow: hidden; display: inline-block;
+  }
+  .help .meter i::before{
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; background: #ff6a2b; height: var(--f);
+  }
+  .help .sw{ display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+
   /* sideways / wide: one row of 16 per bar */
   @media (orientation: landscape) and (min-width: 600px), (min-width: 760px){
     .steps{ grid-template-columns: repeat(4, 1fr); }
@@ -182,6 +213,7 @@
     .step{ aspect-ratio: auto; height: min(calc((100dvh - 120px) / 4 - 6px), 48px); }
     .footer{ grid-column: 1; grid-row: 3; justify-content: center; }
     .footer button{ padding: 8px 10px; }
+    .help{ grid-column: 1 / -1; grid-row: 4; }
   }
 </style>
 </head>
@@ -224,6 +256,104 @@
     <button id="random">🎲 Random</button>
     <button id="clear">Clear</button>
   </div>
+
+  <section class="help" aria-label="How to use">
+    <h2>How to use</h2>
+
+    <details>
+      <summary><span class="ico">▶</span>Play &amp; tempo</summary>
+      <div class="body">
+        <p>Tap the big orange <b>Play</b> button to start the beat, and tap it again to stop. A white outline moves across the grid to show where you are.</p>
+        <p>Tempo is in <b>BPM</b> (beats per minute). Drag the slider (40–240), use <b>−</b> / <b>+</b> to nudge it by 1, or tap <b>Tap</b> in time with a song and it will match the speed.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🥁</span>Sounds (Kick, Snare, Hi-hat)</summary>
+      <div class="body">
+        <p>Each tab is a different drum: <span class="sw" style="background:#ff6a2b"></span><b>Kick</b>, <span class="sw" style="background:#4aa8ff"></span><b>Snare</b> and <span class="sw" style="background:#f2c94c"></span><b>Hi-hat</b>. Each one has its own pattern, and <b>all of them play together</b>. The grid shows whichever tab you're on.</p>
+        <p>Switch tabs anytime. The beat keeps going. The dot on each tab blinks when that drum plays.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">▦</span>The grid</summary>
+      <div class="body">
+        <p>The grid is <b>4 bars</b>, each with <b>16 steps</b> (sixteenth notes). That's 64 steps, and then it loops.</p>
+        <p>The steps come in groups of four. The first step of each group, a slightly lighter square, is the beat: 1, 2, 3, 4. Holding your phone upright, each bar is two rows of 8. Sideways, each bar is one row of 16.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">👆</span>Adding hits &amp; volume</summary>
+      <div class="body">
+        <p><b>Tap a step</b> to add a hit. <b>Tap it again</b> to change how loud it is:</p>
+        <ul>
+          <li><span class="meter"><i style="--f:100%"></i></span><b>Loud</b> (full)</li>
+          <li><span class="meter"><i style="--f:66%"></i></span><b>Medium</b></li>
+          <li><span class="meter"><i style="--f:38%"></i></span><b>Low</b></li>
+          <li><span class="meter"><i style="--f:16%"></i></span><b>Barely there</b> (a "ghost" note)</li>
+        </ul>
+        <p>After "barely there" it goes back to loud. When the beat is stopped, you'll hear each tap at its new volume.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">✋</span>Deleting a hit</summary>
+      <div class="body">
+        <p><b>Press and hold</b> a step for about half a second to remove it. It shrinks while you hold. Let go early and it counts as a normal tap.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🎚</span>Volume for each drum</summary>
+      <div class="body">
+        <p>The slider under the tabs sets the overall volume of the drum you're on. For example, turn the hi-hat down so the kick and snare stand out. Each drum remembers its own level.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🎲</span>Random</summary>
+      <div class="body">
+        <p><b>Random</b> makes a new pattern for the tab you're on, and it's built to sound like a real groove instead of noise. The kick favors the main beats, the snare lands on 2 and 4 with soft ghost notes, and the hi-hat keeps time.</p>
+        <p>Bars 2 and 3 are small variations on bar 1, and bar 4 changes a bit more, like a fill. Press it again for a new one, or <b>Undo</b> to go back.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">⋯</span>Bar menu: copy, random, clear</summary>
+      <div class="body">
+        <p>Tap a <b>bar number</b> (1–4) on the left to open its menu:</p>
+        <ul>
+          <li><b>Copy this bar to</b> Bar 2/3/4 or <b>All</b>. It copies volumes too.</li>
+          <li><b>All sounds</b>: tick this to copy, randomize or clear kick, snare and hi-hat together. Leave it off to change only the drum you're on.</li>
+          <li><b>Random bar</b> / <b>Clear bar</b>: the same as the main buttons, for just that bar.</li>
+        </ul>
+        <p>Tip: build one bar you like, then copy it to <b>All</b>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">↶</span>Undo &amp; Clear</summary>
+      <div class="body">
+        <p><b>Undo</b> steps back through your last 50 changes: taps, deletes, random, copy and clear.</p>
+        <p><b>Clear</b> empties only the drum you're on. The others keep playing.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">📱</span>iPhone tips</summary>
+      <div class="body">
+        <ul>
+          <li>No sound? Turn up the volume. On recent iPhones it plays even with the silent switch on.</li>
+          <li>Leaving the page (home screen, lock, another app) stops the beat. Tap Play when you come back.</li>
+          <li>Turn the phone sideways to see all 4 bars at once.</li>
+          <li>To make it feel like an app, tap <b>Share → Add to Home Screen</b> in Safari.</li>
+          <li>Your pattern isn't saved yet, so reloading the page starts fresh.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
 </div>
 
 <div class="sheet-bg" id="sheet-bg">

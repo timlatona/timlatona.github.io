@@ -324,8 +324,27 @@
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state === 'suspended') ctx.resume();
+    // iPhone uses 'interrupted' (not just 'suspended') after you leave the page
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
   }
+
+  // Leaving the page (home screen, lock, another app) can leave iPhone's audio
+  // stuck. Stop the beat when the page is hidden, and when it comes back, throw
+  // away a stuck audio engine so the next tap on Play builds a fresh one.
+  function resetAudio() {
+    if (!ctx) return;
+    try { ctx.close(); } catch (e) {}
+    ctx = null;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (playing) stop();
+    } else if (ctx && ctx.state !== 'running') {
+      resetAudio();
+    }
+  });
+  window.addEventListener('pagehide', () => { if (playing) stop(); });
+  window.addEventListener('pageshow', e => { if (e.persisted) resetAudio(); });
 
   function noise(t, dur, filterType, freq, level) {
     const src = ctx.createBufferSource();
@@ -372,6 +391,9 @@
   // ---------- scheduler (look ahead, book hits on the audio clock) ----------
   const LOOKAHEAD_MS = 25, SCHEDULE_AHEAD = 0.1;
   function scheduler() {
+    // if the timer fell behind (phone busy, page in background), jump ahead
+    // instead of firing a burst of late notes
+    if (nextTime < ctx.currentTime - 0.2) nextTime = ctx.currentTime + 0.05;
     while (nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
       const hits = [];
       VOICES.forEach(v => {

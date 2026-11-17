@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16161a">
+<title>Drum Machine</title>
+<style>
+  :root{
+    --bg: #16161a;
+    --panel: #212127;
+    --step: #2e2e36;
+    --step-beat: #3a3a44;
+    --on: #ff6a2b;
+    --on-glow: rgba(255,106,43,.55);
+    --play: #f4f4f6;
+    --text: #e8e8ec;
+    --muted: #8a8a96;
+    --gap: 6px;
+    --group-gap: 12px;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{ margin: 0; background: var(--bg); color: var(--text); }
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100dvh;
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .app{ max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  header{ display: flex; align-items: baseline; justify-content: space-between; }
+  h1{ font-size: 18px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
+  .voice{ font-size: 13px; color: var(--muted); }
+
+  /* ---------- transport ---------- */
+  .transport{
+    background: var(--panel); border-radius: 14px; padding: 12px;
+    display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
+  }
+  button{
+    font: inherit; color: var(--text); background: var(--step);
+    border: 0; border-radius: 10px; cursor: pointer;
+  }
+  button:active{ filter: brightness(1.3); }
+  #play{
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--on); color: #111; display: grid; place-items: center;
+  }
+  #play svg{ width: 26px; height: 26px; }
+  .tempo{ display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .tempo-row{ display: flex; align-items: center; gap: 8px; }
+  .bpm{ font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .bpm-label{ font-size: 12px; color: var(--muted); margin-right: auto; }
+  .tempo-row button{ height: 36px; min-width: 40px; padding: 0 10px; font-size: 16px; }
+  #tap{ font-size: 13px; }
+  input[type=range]{ width: 100%; accent-color: var(--on); height: 28px; margin: 0; }
+
+  /* ---------- grid ---------- */
+  .bars{ display: flex; flex-direction: column; gap: 14px; }
+  .bar{ display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+  .bar-num{ font-size: 12px; color: var(--muted); padding-top: 4px; text-align: center; }
+  .steps{
+    display: grid;
+    /* portrait: 2 rows of 8 per bar */
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: var(--group-gap); row-gap: var(--gap);
+  }
+  .group{ display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); }
+  .step{
+    aspect-ratio: 1; border-radius: 8px; background: var(--step);
+    padding: 0; position: relative;
+    transition: background .06s, box-shadow .06s, transform .06s;
+  }
+  .step.beat{ background: var(--step-beat); }
+  .step.on{ background: var(--on); box-shadow: 0 0 10px var(--on-glow); }
+  .step.now{ outline: 2px solid var(--play); outline-offset: -2px; }
+  .step.now.on{ transform: scale(.92); }
+
+  .footer{ display: flex; justify-content: flex-end; }
+  #clear{ padding: 8px 14px; font-size: 13px; color: var(--muted); }
+
+  /* sideways / wide: one row of 16 per bar */
+  @media (orientation: landscape) and (min-width: 600px), (min-width: 760px){
+    .steps{ grid-template-columns: repeat(4, 1fr); }
+    .app{ gap: 10px; }
+    .bars{ gap: 10px; }
+  }
+  /* phone sideways: short screen — tighten so all 4 bars fit */
+  @media (orientation: landscape) and (max-height: 500px){
+    body{ padding-top: max(8px, env(safe-area-inset-top)); }
+    .app{ display: grid; grid-template-columns: 250px 1fr; align-items: start; max-width: none; }
+    .tempo-row{ flex-wrap: wrap; }
+    .tempo-row button{ flex: 1; }
+    header{ grid-column: 1 / -1; }
+    .transport{ grid-template-columns: 1fr; justify-items: center; }
+    .tempo{ width: 100%; }
+    .bars{ gap: 6px; }
+    .steps{ --gap: 4px; --group-gap: 8px; }
+    .step{ aspect-ratio: auto; height: min(calc((100dvh - 90px) / 4 - 6px), 48px); }
+    .footer{ grid-column: 1; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Drum Machine</h1>
+    <span class="voice">Kick · 4 bars · 16ths</span>
+  </header>
+
+  <section class="transport">
+    <button id="play" aria-label="Play">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path id="play-icon" d="M7 4l13 8-13 8z"/></svg>
+    </button>
+    <div class="tempo">
+      <div class="tempo-row">
+        <span class="bpm" id="bpm">120</span>
+        <span class="bpm-label">BPM</span>
+        <button id="minus" aria-label="Tempo down">−</button>
+        <button id="plus" aria-label="Tempo up">+</button>
+        <button id="tap">Tap</button>
+      </div>
+      <input type="range" id="tempo" min="40" max="240" value="120" aria-label="Tempo">
+    </div>
+  </section>
+
+  <section class="bars" id="bars"></section>
+
+  <div class="footer"><button id="clear">Clear</button></div>
+</div>
+
+<script>
+(() => {
+  const STEPS = 64, PER_BAR = 16;
+  const pattern = new Array(STEPS).fill(false);
+  // start with four-on-the-floor so Play does something right away
+  for (let i = 0; i < STEPS; i += 4) pattern[i] = true;
+
+  let bpm = 120;
+  let ctx = null;
+  let playing = false;
+  let currentStep = 0;      // next step to schedule
+  let nextTime = 0;         // audio-clock time of next step
+  let timer = null;
+  const queue = [];         // {step, time} for drawing the playhead
+  let shownStep = -1;
+
+  // ---------- build grid ----------
+  const barsEl = document.getElementById('bars');
+  const stepEls = [];
+  for (let b = 0; b < 4; b++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.innerHTML = `<div class="bar-num">${b + 1}</div>`;
+    const steps = document.createElement('div');
+    steps.className = 'steps';
+    for (let g = 0; g < 4; g++) {
+      const group = document.createElement('div');
+      group.className = 'group';
+      for (let s = 0; s < 4; s++) {
+        const i = b * PER_BAR + g * 4 + s;
+        const el = document.createElement('button');
+        el.className = 'step' + (s === 0 ? ' beat' : '') + (pattern[i] ? ' on' : '');
+        el.setAttribute('aria-label', `Bar ${b + 1}, beat ${g + 1}, step ${s + 1}`);
+        el.setAttribute('aria-pressed', pattern[i]);
+        el.addEventListener('pointerdown', e => { e.preventDefault(); toggle(i); });
+        el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(i); } });
+        stepEls.push(el);
+        group.appendChild(el);
+      }
+      steps.appendChild(group);
+    }
+    bar.appendChild(steps);
+    barsEl.appendChild(bar);
+  }
+
+  function toggle(i) {
+    pattern[i] = !pattern[i];
+    stepEls[i].classList.toggle('on', pattern[i]);
+    stepEls[i].setAttribute('aria-pressed', pattern[i]);
+    // audition the sound when turning a step on while stopped
+    if (pattern[i] && !playing) { ensureAudio(); kick(ctx.currentTime); }
+  }
+
+  // ---------- audio ----------
+  function ensureAudio() {
+    if (!ctx) {
+      // iOS 17+: play even when the ringer/silent switch is on
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+
+  // Synthesized kick: a sine that sweeps down in pitch + a short click
+  function kick(t) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(38, t + 0.45);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(1, t + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.55);
+
+    const click = ctx.createOscillator();
+    const cg = ctx.createGain();
+    click.type = 'triangle';
+    click.frequency.setValueAtTime(1200, t);
+    cg.gain.setValueAtTime(0.25, t);
+    cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+    click.connect(cg).connect(ctx.destination);
+    click.start(t); click.stop(t + 0.02);
+  }
+
+  // ---------- scheduler (look ahead, book hits on the audio clock) ----------
+  const LOOKAHEAD_MS = 25, SCHEDULE_AHEAD = 0.1;
+  function scheduler() {
+    while (nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
+      if (pattern[currentStep]) kick(nextTime);
+      queue.push({ step: currentStep, time: nextTime });
+      nextTime += 60 / bpm / 4;               // one 16th note
+      currentStep = (currentStep + 1) % STEPS;
+    }
+  }
+
+  function draw() {
+    if (!playing) return;
+    const now = ctx.currentTime;
+    let step = shownStep;
+    while (queue.length && queue[0].time <= now) step = queue.shift().step;
+    if (step !== shownStep) {
+      if (shownStep >= 0) stepEls[shownStep].classList.remove('now');
+      stepEls[step].classList.add('now');
+      shownStep = step;
+    }
+    requestAnimationFrame(draw);
+  }
+
+  const playBtn = document.getElementById('play');
+  const icon = document.getElementById('play-icon');
+  function start() {
+    ensureAudio();
+    playing = true;
+    currentStep = 0;
+    nextTime = ctx.currentTime + 0.05;
+    queue.length = 0;
+    scheduler();
+    timer = setInterval(scheduler, LOOKAHEAD_MS);
+    icon.setAttribute('d', 'M6 5h4v14H6zM14 5h4v14h-4z');
+    playBtn.setAttribute('aria-label', 'Stop');
+    requestAnimationFrame(draw);
+  }
+  function stop() {
+    playing = false;
+    clearInterval(timer);
+    if (shownStep >= 0) stepEls[shownStep].classList.remove('now');
+    shownStep = -1;
+    icon.setAttribute('d', 'M7 4l13 8-13 8z');
+    playBtn.setAttribute('aria-label', 'Play');
+  }
+  playBtn.addEventListener('click', () => playing ? stop() : start());
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !e.target.classList.contains('step')) { e.preventDefault(); playing ? stop() : start(); }
+  });
+
+  // ---------- tempo ----------
+  const bpmEl = document.getElementById('bpm');
+  const slider = document.getElementById('tempo');
+  function setBpm(v) {
+    bpm = Math.max(40, Math.min(240, Math.round(v)));
+    bpmEl.textContent = bpm;
+    slider.value = bpm;
+  }
+  slider.addEventListener('input', () => setBpm(+slider.value));
+  document.getElementById('minus').addEventListener('click', () => setBpm(bpm - 1));
+  document.getElementById('plus').addEventListener('click', () => setBpm(bpm + 1));
+
+  let taps = [];
+  document.getElementById('tap').addEventListener('click', () => {
+    const t = performance.now();
+    if (taps.length && t - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(t);
+    if (taps.length > 5) taps.shift();
+    if (taps.length >= 2) {
+      const avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+      setBpm(60000 / avg);
+    }
+  });
+
+  document.getElementById('clear').addEventListener('click', () => {
+    pattern.fill(false);
+    stepEls.forEach(el => { el.classList.remove('on'); el.setAttribute('aria-pressed', false); });
+  });
+})();
+</script>
+</body>
+</html>

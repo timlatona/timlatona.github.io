@@ -36,7 +36,7 @@
     user-select: none; -webkit-user-select: none;
     touch-action: manipulation;
   }
-  .app{ max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .app{ max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 11px; }
 
   header{ display: flex; align-items: baseline; justify-content: space-between; }
   h1{ font-size: 18px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
@@ -102,9 +102,31 @@
     transition: background .06s, box-shadow .06s, transform .06s;
   }
   .step.beat{ background: var(--step-beat); }
-  .step.on{ background: var(--on); box-shadow: 0 0 10px var(--on-glow); }
+  .step{ overflow: hidden; -webkit-touch-callout: none; }
+  /* volume shows as a fill from the bottom, like a meter */
+  .step::before{
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+    height: var(--fill, 0%); background: var(--on);
+    transition: height .08s;
+  }
+  .step.on[data-level="1"]{ box-shadow: 0 0 10px var(--on-glow); }
+  .step[data-level="1"]{ --fill: 100%; }
+  .step[data-level="2"]{ --fill: 66%; }
+  .step[data-level="3"]{ --fill: 38%; }
+  .step[data-level="4"]{ --fill: 16%; }
   .step.now{ outline: 2px solid var(--play); outline-offset: -2px; }
   .step.now.on{ transform: scale(.92); }
+  .step.holding{ transform: scale(.85); opacity: .5; transition: transform .4s, opacity .4s; }
+
+  /* ---------- volume for the selected sound ---------- */
+  .mix{
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--muted); padding: 0 4px;
+  }
+  .mix .dot{ width: 9px; height: 9px; border-radius: 50%; background: var(--on); flex: none; }
+  .mix label{ white-space: nowrap; }
+  .mix input{ accent-color: var(--on); flex: 1; }
+  .mix .val{ min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
 
   .footer{ display: flex; gap: 8px; justify-content: flex-end; }
   .footer button{ padding: 9px 14px; font-size: 13px; color: var(--text); }
@@ -146,7 +168,8 @@
   @media (orientation: landscape) and (max-height: 500px){
     body{ padding-top: max(8px, env(safe-area-inset-top)); }
     .app{ display: grid; grid-template-columns: 250px 1fr; align-items: start; max-width: none; }
-    header{ grid-column: 1; grid-row: 1; align-self: center; }
+    header{ display: none; }
+    .mix{ grid-column: 1; grid-row: 1; align-self: center; padding: 0; }
     .subtitle{ display: none; }
     .tabs{ grid-column: 2; grid-row: 1; padding: 3px; }
     .tab{ height: 32px; }
@@ -187,6 +210,13 @@
 
   <nav class="tabs" role="tablist" id="tabs"></nav>
 
+  <div class="mix" id="mix" data-voice="kick">
+    <span class="dot"></span>
+    <label for="mixvol" id="mix-label">Kick volume</label>
+    <input type="range" id="mixvol" min="0" max="100" value="100">
+    <span class="val" id="mix-val">100</span>
+  </div>
+
   <section class="bars" id="bars" data-voice="kick"></section>
 
   <div class="footer">
@@ -218,15 +248,23 @@
     { id: 'hat',   name: 'Hi-hat' },
   ];
 
+  // Each step holds a volume level: 0 = off, 1 = loud, 2 = medium, 3 = low, 4 = barely there.
+  // (not evenly spaced on purpose — ears hear loudness on a curve)
+  const LEVEL_GAIN = [0, 1, 0.6, 0.35, 0.15];
+
   // one 64-step pattern per sound; start with a basic beat so Play does something
   const patterns = {};
-  VOICES.forEach(v => patterns[v.id] = new Array(STEPS).fill(false));
+  VOICES.forEach(v => patterns[v.id] = new Array(STEPS).fill(0));
   for (let i = 0; i < STEPS; i++) {
     const s = i % PER_BAR;
-    if (s % 4 === 0) patterns.kick[i] = true;          // every beat
-    if (s === 4 || s === 12) patterns.snare[i] = true; // beats 2 and 4
-    if (s % 2 === 0) patterns.hat[i] = true;           // 8th notes
+    if (s % 4 === 0) patterns.kick[i] = 1;             // every beat
+    if (s === 4 || s === 12) patterns.snare[i] = 1;    // beats 2 and 4
+    if (s % 2 === 0) patterns.hat[i] = s % 4 ? 3 : 2;  // 8ths, softer on the &
   }
+
+  // overall volume per sound (0–100 on the slider)
+  const mix = { kick: 100, snare: 100, hat: 100 };
+  let buses = {};
 
   let current = 'kick';
   let bpm = 120;
@@ -275,8 +313,7 @@
         const el = document.createElement('button');
         el.className = 'step' + (s === 0 ? ' beat' : '');
         el.setAttribute('aria-label', `Bar ${b + 1}, beat ${g + 1}, step ${s + 1}`);
-        el.addEventListener('pointerdown', e => { e.preventDefault(); toggle(i); });
-        el.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(i); } });
+        attachStepInput(el, i);
         stepEls.push(el);
         group.appendChild(el);
       }
@@ -286,12 +323,15 @@
     barsEl.appendChild(bar);
   }
 
+  function paintStep(i) {
+    const lvl = patterns[current][i];
+    const el = stepEls[i];
+    el.classList.toggle('on', lvl > 0);
+    el.dataset.level = lvl;
+    el.setAttribute('aria-pressed', lvl > 0);
+  }
   function render() {
-    const p = patterns[current];
-    stepEls.forEach((el, i) => {
-      el.classList.toggle('on', p[i]);
-      el.setAttribute('aria-pressed', p[i]);
-    });
+    stepEls.forEach((el, i) => paintStep(i));
   }
 
   function selectVoice(id) {
@@ -300,17 +340,54 @@
     barsEl.dataset.voice = id;
     VOICES.forEach(v => tabEls[v.id].setAttribute('aria-selected', v.id === id));
     document.getElementById('subtitle').textContent = `${name} · 4 bars · 16ths`;
+    mixEl.dataset.voice = id;
+    document.getElementById('mix-label').textContent = `${name} volume`;
+    mixSlider.value = mix[id];
+    mixVal.textContent = mix[id];
     render();
   }
 
-  function toggle(i) {
+  // tap: off → loud → medium → low → barely there → loud …
+  function tapStep(i) {
     saveUndo();
     const p = patterns[current];
-    p[i] = !p[i];
-    stepEls[i].classList.toggle('on', p[i]);
-    stepEls[i].setAttribute('aria-pressed', p[i]);
-    // audition the sound when turning a step on while stopped
-    if (p[i] && !playing) { ensureAudio(); SOUNDS[current](ctx.currentTime); }
+    p[i] = p[i] === 0 ? 1 : (p[i] % 4) + 1;
+    paintStep(i);
+    // audition the sound at that volume while stopped
+    if (!playing) { ensureAudio(); trigger(current, ctx.currentTime, p[i]); }
+  }
+  // long-press: delete
+  function deleteStep(i) {
+    if (!patterns[current][i]) return;
+    saveUndo();
+    patterns[current][i] = 0;
+    paintStep(i);
+  }
+
+  const HOLD_MS = 400;
+  function attachStepInput(el, i) {
+    let holdTimer = null, longFired = false;
+    const cancel = () => { clearTimeout(holdTimer); holdTimer = null; el.classList.remove('holding'); };
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      longFired = false;
+      if (patterns[current][i]) el.classList.add('holding');
+      holdTimer = setTimeout(() => {
+        holdTimer = null; longFired = true;
+        el.classList.remove('holding');
+        deleteStep(i);
+      }, HOLD_MS);
+    });
+    el.addEventListener('pointerup', () => {
+      if (holdTimer) { cancel(); if (!longFired) tapStep(i); }
+    });
+    el.addEventListener('pointerleave', cancel);
+    el.addEventListener('pointercancel', cancel);
+    el.addEventListener('contextmenu', e => e.preventDefault());   // no iOS/Android long-press menu
+    el.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); tapStep(i); }
+      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteStep(i); }
+    });
   }
 
   // ---------- audio ----------
@@ -323,6 +400,13 @@
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      // one volume control ("bus") per sound
+      buses = {};
+      VOICES.forEach(v => {
+        buses[v.id] = ctx.createGain();
+        buses[v.id].gain.value = mixGain(mix[v.id]);
+        buses[v.id].connect(ctx.destination);
+      });
     }
     // iPhone uses 'interrupted' (not just 'suspended') after you leave the page
     if (ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -346,7 +430,15 @@
   window.addEventListener('pagehide', () => { if (playing) stop(); });
   window.addEventListener('pageshow', e => { if (e.persisted) resetAudio(); });
 
-  function noise(t, dur, filterType, freq, level) {
+  // play one hit of a sound at a step volume level, through that sound's bus
+  function trigger(voice, t, level) {
+    const g = ctx.createGain();
+    g.gain.value = LEVEL_GAIN[level];
+    g.connect(buses[voice]);
+    SOUNDS[voice](t, g);
+  }
+
+  function noise(out, t, dur, filterType, freq, level) {
     const src = ctx.createBufferSource();
     src.buffer = noiseBuf;
     const f = ctx.createBiquadFilter();
@@ -354,11 +446,11 @@
     const g = ctx.createGain();
     g.gain.setValueAtTime(level, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f).connect(g).connect(ctx.destination);
+    src.connect(f).connect(g).connect(out);
     src.start(t); src.stop(t + dur + 0.02);
   }
 
-  function tone(t, type, f0, f1, sweep, dur, level) {
+  function tone(out, t, type, f0, f1, sweep, dur, level) {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.type = type;
@@ -367,24 +459,24 @@
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(level, t + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(ctx.destination);
+    o.connect(g).connect(out);
     o.start(t); o.stop(t + dur + 0.05);
   }
 
   const SOUNDS = {
     // sine that sweeps down in pitch + short click
-    kick(t) {
-      tone(t, 'sine', 150, 42, 0.14, 0.5, 1);
-      tone(t, 'triangle', 1200, 1200, 0.01, 0.012, 0.25);
+    kick(t, out) {
+      tone(out, t, 'sine', 150, 42, 0.14, 0.5, 1);
+      tone(out, t, 'triangle', 1200, 1200, 0.01, 0.012, 0.25);
     },
     // noise "snap" + a short body tone
-    snare(t) {
-      noise(t, 0.2, 'highpass', 1200, 0.7);
-      tone(t, 'triangle', 220, 160, 0.08, 0.12, 0.5);
+    snare(t, out) {
+      noise(out, t, 0.2, 'highpass', 1200, 0.7);
+      tone(out, t, 'triangle', 220, 160, 0.08, 0.12, 0.5);
     },
     // short, bright, high-passed noise (closed hat)
-    hat(t) {
-      noise(t, 0.05, 'highpass', 7000, 0.45);
+    hat(t, out) {
+      noise(out, t, 0.05, 'highpass', 7000, 0.45);
     },
   };
 
@@ -397,7 +489,8 @@
     while (nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
       const hits = [];
       VOICES.forEach(v => {
-        if (patterns[v.id][currentStep]) { SOUNDS[v.id](nextTime); hits.push(v.id); }
+        const lvl = patterns[v.id][currentStep];
+        if (lvl) { trigger(v.id, nextTime, lvl); hits.push(v.id); }
       });
       queue.push({ step: currentStep, time: nextTime, hits });
       nextTime += 60 / bpm / 4;               // one 16th note
@@ -498,8 +591,15 @@
     snare: [  0, .04, .04, .08, .92, .06, .04, .12,   0, .04, .06, .10, .92, .08, .12, .18],
     hat:   [.90, .30, .85, .30, .90, .30, .85, .30, .90, .30, .85, .30, .90, .30, .85, .40],
   };
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  // how loud a random hit is, by sound and position in the bar
+  function randomLevel(voice, s) {
+    if (voice === 'kick')  return (s === 0 || s === 8) ? 1 : pick([1, 2, 2, 3]);
+    if (voice === 'snare') return (s === 4 || s === 12) ? 1 : pick([3, 4, 4]);   // ghost notes
+    /* hat */              return s % 4 === 0 ? pick([1, 2]) : s % 2 === 0 ? pick([2, 3]) : pick([3, 4]);
+  }
   function randomBar(voice) {
-    return ODDS[voice].map(p => Math.random() < p);
+    return ODDS[voice].map((p, s) => Math.random() < p ? randomLevel(voice, s) : 0);
   }
   // bars 2–4 repeat bar 1 with small changes, so it sounds like a groove;
   // bar 4 changes a bit more, like a fill
@@ -522,7 +622,7 @@
   // clears only the sound you're looking at
   document.getElementById('clear').addEventListener('click', () => {
     saveUndo();
-    patterns[current].fill(false);
+    patterns[current].fill(0);
     render();
   });
 
@@ -571,8 +671,19 @@
   });
   document.getElementById('bar-clear').addEventListener('click', () => {
     saveUndo();
-    voicesFor().forEach(v => patterns[v].fill(false, sheetBar * PER_BAR, (sheetBar + 1) * PER_BAR));
+    voicesFor().forEach(v => patterns[v].fill(0, sheetBar * PER_BAR, (sheetBar + 1) * PER_BAR));
     render(); closeSheet();
+  });
+
+  // ---------- volume slider for the selected sound ----------
+  const mixEl = document.getElementById('mix');
+  const mixSlider = document.getElementById('mixvol');
+  const mixVal = document.getElementById('mix-val');
+  function mixGain(v) { return Math.pow(v / 100, 2); }   // feels even across the slider
+  mixSlider.addEventListener('input', () => {
+    mix[current] = +mixSlider.value;
+    mixVal.textContent = mix[current];
+    if (ctx && buses[current]) buses[current].gain.setTargetAtTime(mixGain(mix[current]), ctx.currentTime, 0.01);
   });
 
   render();

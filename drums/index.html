@@ -25,6 +25,7 @@
   [data-voice="kick"]  { --on: #ff6a2b; --on-glow: rgba(255,106,43,.55); }
   [data-voice="snare"] { --on: #4aa8ff; --on-glow: rgba(74,168,255,.55); }
   [data-voice="hat"]   { --on: #f2c94c; --on-glow: rgba(242,201,76,.55); }
+  [data-voice="bass"]  { --on: #3ddc97; --on-glow: rgba(61,220,151,.55); }
 
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body{ margin: 0; background: var(--bg); color: var(--text); }
@@ -97,12 +98,13 @@
 
   /* ---------- sound tabs ---------- */
   .tabs{
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     background: var(--panel); border-radius: 12px; padding: 5px;
   }
   .tab{
     height: 40px; font-size: 14px; font-weight: 600; color: var(--muted);
-    background: transparent; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: transparent; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 0 4px; white-space: nowrap;
   }
   .tab .dot{
     width: 9px; height: 9px; border-radius: 50%; background: var(--on);
@@ -219,6 +221,47 @@
   }
   .help .sw{ display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
 
+  /* ---------- bass ---------- */
+  .step .lbl, .step .pitch{ display: none; }
+  .bars[data-voice="bass"] .step{ aspect-ratio: 1.7; }
+  /* bass shows volume as brightness, the note name, and a tick for how high it is */
+  .bars[data-voice="bass"] .step.on::before{ height: 100%; }
+  .bars[data-voice="bass"] .step[data-level="2"]::before{ opacity: .72; }
+  .bars[data-voice="bass"] .step[data-level="3"]::before{ opacity: .48; }
+  .bars[data-voice="bass"] .step[data-level="4"]::before{ opacity: .28; }
+  .bars[data-voice="bass"] .step.on .lbl{
+    display: block; position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-weight: 700; color: #0d1f17; letter-spacing: -.02em; line-height: 1;
+  }
+  .bars[data-voice="bass"] .step[data-level="3"] .lbl,
+  .bars[data-voice="bass"] .step[data-level="4"] .lbl{ color: var(--text); }
+  .bars[data-voice="bass"] .step.on .pitch{
+    display: block; position: absolute; left: 2px; width: 3px; height: 3px; border-radius: 1px;
+    background: rgba(0,0,0,.55); bottom: calc(8% + var(--pitch) * .8);
+  }
+  .step.sel::after{
+    content: ""; position: absolute; inset: 0; border: 2px solid var(--text);
+    border-radius: inherit; pointer-events: none;
+  }
+
+  .keys{ display: none; flex-direction: column-reverse; gap: 6px; }
+  .bars[data-voice="bass"] ~ .keys{ display: flex; }
+  .octave{ --wk: 8; position: relative; display: flex; gap: 3px; height: 48px; }
+  .wkey{
+    flex: 1; height: 100%; border-radius: 0 0 7px 7px; padding: 0 0 4px; background: #e9e9ee; color: #55555f;
+    font-size: 10px; font-weight: 700; display: flex; align-items: flex-end; justify-content: center;
+    -webkit-touch-callout: none;
+  }
+  .wkey.spacer{ visibility: hidden; }
+  .bkey{
+    position: absolute; top: 0; height: 58%; width: calc(100% / var(--wk) * .62);
+    transform: translateX(-50%); border-radius: 0 0 5px 5px; background: #23232a;
+    border: 1px solid #000; padding: 0; z-index: 1; -webkit-touch-callout: none;
+  }
+  .wkey.active{ background: #3ddc97; color: #0d1f17; }
+  .bkey.active{ background: #3ddc97; }
+  .wkey:active, .bkey:active{ filter: brightness(.8); }
+
   /* sideways / wide: one row of 16 per bar */
   @media (orientation: landscape) and (min-width: 600px), (min-width: 760px){
     .steps{ grid-template-columns: repeat(4, 1fr); }
@@ -245,6 +288,15 @@
     .step{ aspect-ratio: auto; height: min(calc((100dvh - 120px) / 4 - 6px), 48px); }
     .footer{ grid-column: 1; grid-row: 3; justify-content: center; }
     .footer button{ padding: 8px 10px; }
+    /* bass: grid on the controls' row, keyboard beside the Undo/Random buttons */
+    .bars[data-voice="bass"]{ grid-row: 2; }
+    .keys{ grid-column: 2; grid-row: 3; flex-direction: row; gap: 3px; }
+    .octave{ flex: 8; height: 42px; }
+    .octave.low{ flex: 7; }
+    .octave.low{ --wk: 7; }
+    .octave.low .spacer{ display: none; }
+    .bars[data-voice="bass"] .step{ aspect-ratio: auto; height: min(calc((100dvh - 160px) / 4 - 6px), 38px); }
+    .bars[data-voice="bass"] .step.on .pitch{ display: none; }   /* cells too narrow; the note name says it */
     .help{ grid-column: 1 / -1; grid-row: 4; }
   }
 </style>
@@ -285,6 +337,8 @@
   </div>
 
   <section class="bars" id="bars" data-voice="kick"></section>
+
+  <div class="keys" id="keys" aria-label="Bass keyboard, E1 to E3"></div>
 
   <div class="footer">
     <button id="undo" disabled>↶ Undo</button>
@@ -341,7 +395,23 @@
     </details>
 
     <details>
-      <summary><span class="ico">🎚</span>Volume for each drum</summary>
+      <summary><span class="ico">🎸</span>Bass</summary>
+      <div class="body">
+        <p>The <span class="sw" style="background:#3ddc97"></span><b>Bass</b> tab is a bass line that plays one note at a time, in time with the drums. Its range is two octaves, <b>E1 to E3</b>, like the low end of a bass guitar.</p>
+        <ul>
+          <li><b>Tap an empty step</b> to add a note. It uses the last note you picked.</li>
+          <li><b>Tap a note</b> to select it (white outline), then <b>tap a key</b> on the keyboard to change its pitch.</li>
+          <li><b>Tap the selected note again</b> to change its volume (bright = loud, faint = soft).</li>
+          <li><b>Press and hold</b> to delete, just like the drums.</li>
+        </ul>
+        <p>The keyboard has the low octave on the bottom row and the high octave on top. Tapping a key with no step selected just plays it and makes it the note for your next tap. Each step shows its note name, and a small tick on the left shows how high it is.</p>
+        <p><b>Random</b> on the Bass tab writes a line in E minor pentatonic that mostly lands with the kick.</p>
+        <p>Phone speakers can't reproduce the lowest notes well. Use headphones or a speaker to really hear the bass.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🎚</span>Volume for each sound</summary>
       <div class="body">
         <p>The slider under the tabs sets the overall volume of the drum you're on. For example, turn the hi-hat down so the kick and snare stand out. Each drum remembers its own level.</p>
       </div>
@@ -361,7 +431,7 @@
         <p>Tap a <b>bar number</b> (1–4) on the left to open its menu:</p>
         <ul>
           <li><b>Copy this bar to</b> Bar 2/3/4 or <b>All</b>. It copies volumes too.</li>
-          <li><b>All sounds</b>: tick this to copy, randomize or clear kick, snare and hi-hat together. Leave it off to change only the drum you're on.</li>
+          <li><b>All sounds</b>: tick this to copy, randomize or clear every sound together (drums and bass). Leave it off to change only the tab you're on.</li>
           <li><b>Random bar</b> / <b>Clear bar</b>: the same as the main buttons, for just that bar.</li>
         </ul>
         <p>Tip: build one bar you like, then copy it to <b>All</b>.</p>
@@ -419,7 +489,7 @@
     <h2 id="sheet-title"><span class="dot"></span><span></span></h2>
     <div class="label">Copy this bar to</div>
     <div class="row" id="copy-row"></div>
-    <label class="all"><input type="checkbox" id="all-sounds"> All sounds (kick, snare and hi-hat)</label>
+    <label class="all"><input type="checkbox" id="all-sounds"> All sounds (drums and bass)</label>
     <div class="row two">
       <button id="bar-random">🎲 Random bar</button>
       <button id="bar-clear">Clear bar</button>
@@ -434,6 +504,7 @@
     { id: 'kick',  name: 'Kick' },
     { id: 'snare', name: 'Snare' },
     { id: 'hat',   name: 'Hi-hat' },
+    { id: 'bass',  name: 'Bass' },
   ];
 
   // Each step holds a volume level: 0 = off, 1 = loud, 2 = medium, 3 = low, 4 = barely there.
@@ -450,8 +521,17 @@
     if (s % 2 === 0) patterns.hat[i] = s % 4 ? 3 : 2;  // 8ths, softer on the &
   }
 
+  // Bass: each step also has a note (MIDI number). Range E1 (28) to E3 (52).
+  const LOW = 28, HIGH = 52;
+  let notes = new Array(STEPS).fill(LOW);
+  let lastNote = LOW;        // note used when you tap an empty bass step
+  let selStep = -1;          // selected bass step (white outline)
+  const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const noteName = n => NAMES[n % 12] + (Math.floor(n / 12) - 1);
+  const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
+
   // overall volume per sound (0–100 on the slider)
-  const mix = { kick: 100, snare: 100, hat: 100 };
+  const mix = { kick: 100, snare: 100, hat: 100, bass: 100 };
   let buses = {};
 
   let current = 'kick';
@@ -500,6 +580,7 @@
         const i = b * PER_BAR + g * 4 + s;
         const el = document.createElement('button');
         el.className = 'step' + (s === 0 ? ' beat' : '');
+        el.innerHTML = '<span class="lbl"></span><span class="pitch"></span>';
         el.setAttribute('aria-label', `Bar ${b + 1}, beat ${g + 1}, step ${s + 1}`);
         attachStepInput(el, i);
         stepEls.push(el);
@@ -517,9 +598,18 @@
     el.classList.toggle('on', lvl > 0);
     el.dataset.level = lvl;
     el.setAttribute('aria-pressed', lvl > 0);
+    const bass = current === 'bass';
+    el.classList.toggle('sel', bass && i === selStep);
+    if (bass && lvl) {
+      el.firstChild.textContent = noteName(notes[i]);
+      el.style.setProperty('--pitch', ((notes[i] - LOW) / (HIGH - LOW) * 100) + '%');
+    } else if (el.firstChild.textContent) {
+      el.firstChild.textContent = '';
+    }
   }
   function render() {
     stepEls.forEach((el, i) => paintStep(i));
+    paintKeys();
     changed();
   }
 
@@ -537,6 +627,7 @@
 
   // tap: off → loud → medium → low → barely there → loud …
   function tapStep(i) {
+    if (current === 'bass') return tapBass(i);
     saveUndo();
     const p = patterns[current];
     p[i] = p[i] === 0 ? 1 : (p[i] % 4) + 1;
@@ -545,9 +636,84 @@
     // audition the sound at that volume while stopped
     if (!playing) { ensureAudio(); trigger(current, ctx.currentTime, p[i]); }
   }
+
+  // ---------- bass editing ----------
+  // tap empty step: add the last-picked note and select it
+  // tap another note: select it · tap the selected note: change its volume
+  function tapBass(i) {
+    const p = patterns.bass;
+    const prevSel = selStep;
+    if (p[i] === 0) {
+      saveUndo();
+      p[i] = 1; notes[i] = lastNote;
+    } else if (selStep === i) {
+      saveUndo();
+      p[i] = (p[i] % 4) + 1;
+    } else {
+      lastNote = notes[i];
+    }
+    selStep = i;
+    if (prevSel >= 0 && prevSel !== i) paintStep(prevSel);
+    paintStep(i); paintKeys(); changed();
+    auditionBass(notes[i], p[i]);
+  }
+  function pressKey(n) {
+    lastNote = n;
+    if (selStep >= 0) {
+      saveUndo();
+      notes[selStep] = n;
+      if (!patterns.bass[selStep]) patterns.bass[selStep] = 1;
+      paintStep(selStep); changed();
+    }
+    paintKeys();
+    auditionBass(n, selStep >= 0 ? patterns.bass[selStep] : 1);
+  }
+  function auditionBass(n, lvl) {
+    ensureAudio();
+    trigger('bass', ctx.currentTime, lvl || 1, { note: n, dur: 0.3 });
+  }
+
+  // two rows: E1–D♯2 on the bottom, E2–E3 on top
+  const keysEl = document.getElementById('keys');
+  const keyEls = {};
+  function buildOctave(from, to, cls) {
+    const row = document.createElement('div');
+    row.className = 'octave ' + cls;
+    let whites = 0;
+    for (let n = from; n <= to; n++) {
+      const k = document.createElement('button');
+      k.setAttribute('aria-label', noteName(n));
+      if (isBlack(n)) {
+        k.className = 'bkey';
+        k.style.left = `calc(${whites} * 100% / var(--wk))`;
+      } else {
+        k.className = 'wkey';
+        const name = noteName(n);
+        k.textContent = (n % 12 === 4 || n % 12 === 0) ? name : name.replace(/\d/, '');
+        whites++;
+      }
+      k.addEventListener('pointerdown', e => { e.preventDefault(); pressKey(n); });
+      k.addEventListener('contextmenu', e => e.preventDefault());
+      keyEls[n] = k;
+      row.appendChild(k);
+    }
+    // keep both rows the same width: pad the low row (7 white keys) to 8
+    if (cls === 'low') {
+      const pad = document.createElement('span');
+      pad.className = 'wkey spacer';
+      row.appendChild(pad);
+    }
+    return row;
+  }
+  keysEl.append(buildOctave(LOW, LOW + 11, 'low'), buildOctave(LOW + 12, HIGH, 'high'));
+  function paintKeys() {
+    const active = selStep >= 0 && patterns.bass[selStep] ? notes[selStep] : lastNote;
+    for (const n in keyEls) keyEls[n].classList.toggle('active', +n === active);
+  }
   // long-press: delete
   function deleteStep(i) {
-    if (!patterns[current][i]) return;
+    if (current === 'bass' && selStep === i) { selStep = -1; }
+    if (!patterns[current][i]) { paintStep(i); return; }
     saveUndo();
     patterns[current][i] = 0;
     paintStep(i);
@@ -621,11 +787,11 @@
   window.addEventListener('pageshow', e => { if (e.persisted) resetAudio(); });
 
   // play one hit of a sound at a step volume level, through that sound's bus
-  function trigger(voice, t, level) {
+  function trigger(voice, t, level, extra) {
     const g = ctx.createGain();
     g.gain.value = LEVEL_GAIN[level];
     g.connect(buses[voice]);
-    SOUNDS[voice](t, g);
+    SOUNDS[voice](t, g, extra);
   }
 
   function noise(out, t, dur, filterType, freq, level) {
@@ -668,6 +834,30 @@
     hat(t, out) {
       noise(out, t, 0.05, 'highpass', 7000, 0.45);
     },
+    // bass synth: sawtooth + sine sub, through a low-pass filter that closes
+    // after the attack (gives a plucky "synth bass" tone)
+    bass(t, out, { note, dur }) {
+      const f = 440 * Math.pow(2, (note - 69) / 12);
+      const end = t + Math.max(0.05, dur * 0.92);
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass'; filt.Q.value = 5;
+      filt.frequency.setValueAtTime(Math.min(f * 16, 4000), t);
+      filt.frequency.exponentialRampToValueAtTime(Math.max(f * 2.5, 120), t + 0.18);
+      const amp = ctx.createGain();
+      amp.gain.setValueAtTime(0.0001, t);
+      amp.gain.exponentialRampToValueAtTime(0.55, t + 0.006);
+      amp.gain.setValueAtTime(0.55, end);
+      amp.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
+      filt.connect(amp).connect(out);
+      const saw = ctx.createOscillator();
+      saw.type = 'sawtooth'; saw.frequency.value = f;
+      const sub = ctx.createOscillator();
+      sub.type = 'sine'; sub.frequency.value = f;
+      const subGain = ctx.createGain(); subGain.gain.value = 0.8;
+      saw.connect(filt);
+      sub.connect(subGain).connect(filt);
+      [saw, sub].forEach(o => { o.start(t); o.stop(end + 0.06); });
+    },
   };
 
   // ---------- scheduler (look ahead, book hits on the audio clock) ----------
@@ -680,7 +870,10 @@
       const hits = [];
       VOICES.forEach(v => {
         const lvl = patterns[v.id][currentStep];
-        if (lvl) { trigger(v.id, nextTime, lvl); hits.push(v.id); }
+        if (lvl) {
+          trigger(v.id, nextTime, lvl, v.id === 'bass' ? { note: notes[currentStep], dur: 60 / bpm / 4 } : undefined);
+          hits.push(v.id);
+        }
       });
       queue.push({ step: currentStep, time: nextTime, hits });
       nextTime += 60 / bpm / 4;               // one 16th note
@@ -760,7 +953,7 @@
   const undoStack = [];
   const undoBtn = document.getElementById('undo');
   function saveUndo() {
-    const snap = { bpm, mix: { ...mix }, p: {} };
+    const snap = { bpm, mix: { ...mix }, p: {}, notes: notes.slice() };
     VOICES.forEach(v => snap.p[v.id] = patterns[v.id].slice());
     undoStack.push(snap);
     if (undoStack.length > 50) undoStack.shift();
@@ -770,6 +963,7 @@
     const snap = undoStack.pop();
     if (!snap) return;
     VOICES.forEach(v => { patterns[v.id] = snap.p[v.id]; mix[v.id] = snap.mix[v.id]; applyMix(v.id); });
+    notes = snap.notes;
     setBpm(snap.bpm);
     undoBtn.disabled = !undoStack.length;
     selectVoice(current);
@@ -791,11 +985,48 @@
     /* hat */              return s % 4 === 0 ? pick([1, 2]) : s % 2 === 0 ? pick([2, 3]) : pick([3, 4]);
   }
   function randomBar(voice) {
+    if (voice === 'bass') return randomBassBar().map(x => x.lvl);
     return ODDS[voice].map((p, s) => Math.random() < p ? randomLevel(voice, s) : 0);
+  }
+  // bass: E minor pentatonic, mostly the root, and it likes to land with the kick
+  const SCALE = [28, 31, 33, 35, 38, 40, 43, 45, 47, 50, 52];   // E G A B D across E1–E3
+  function randomBassNote(s) {
+    if (s === 0) return 28;
+    const r = Math.random();
+    if (r < 0.4) return 28;
+    if (r < 0.55) return 40;
+    return pick(SCALE);
+  }
+  function randomBassBar(bar) {
+    const kick = bar === undefined ? [] : patterns.kick.slice(bar * PER_BAR, (bar + 1) * PER_BAR);
+    const out = [];
+    for (let s = 0; s < PER_BAR; s++) {
+      const odds = s === 0 ? 0.95 : kick[s] ? 0.75 : s % 2 === 0 ? 0.25 : 0.1;
+      out.push(Math.random() < odds
+        ? { lvl: s % 4 === 0 ? 1 : pick([1, 2, 2, 3]), note: randomBassNote(s) }
+        : { lvl: 0, note: LOW });
+    }
+    return out;
+  }
+  function writeBassBar(bar, steps) {
+    steps.forEach((x, s) => {
+      patterns.bass[bar * PER_BAR + s] = x.lvl;
+      notes[bar * PER_BAR + s] = x.note;
+    });
   }
   // bars 2–4 repeat bar 1 with small changes, so it sounds like a groove;
   // bar 4 changes a bit more, like a fill
   function randomize(voice) {
+    if (voice === 'bass') {
+      const base = randomBassBar(0);
+      for (let b = 0; b < 4; b++) {
+        const fresh = randomBassBar(b);
+        const amount = b === 0 ? 0 : b === 3 ? 0.3 : 0.1;
+        writeBassBar(b, base.map((x, s) => Math.random() < amount ? fresh[s] : x));
+      }
+      selStep = -1;
+      return;
+    }
     const base = randomBar(voice);
     for (let b = 0; b < 4; b++) {
       const amount = b === 0 ? 0 : b === 3 ? 0.25 : 0.08;
@@ -827,7 +1058,10 @@
   function copyBar(from, targets) {
     saveUndo();
     voicesFor().forEach(v => targets.forEach(t => {
-      for (let s = 0; s < PER_BAR; s++) patterns[v][t * PER_BAR + s] = patterns[v][from * PER_BAR + s];
+      for (let s = 0; s < PER_BAR; s++) {
+        patterns[v][t * PER_BAR + s] = patterns[v][from * PER_BAR + s];
+        if (v === 'bass') notes[t * PER_BAR + s] = notes[from * PER_BAR + s];
+      }
     }));
     render(); closeSheet();
   }
@@ -857,6 +1091,7 @@
   document.getElementById('bar-random').addEventListener('click', () => {
     saveUndo();
     voicesFor().forEach(v => {
+      if (v === 'bass') return writeBassBar(sheetBar, randomBassBar(sheetBar));
       const bar = randomBar(v);
       for (let s = 0; s < PER_BAR; s++) patterns[v][sheetBar * PER_BAR + s] = bar[s];
     });
@@ -888,9 +1123,12 @@
   //
   // A beat is described as plain data (below). That same description is what
   // goes into links and saved beats, and could go into a database later.
-  //   { v: 1, bpm: 120,
-  //     tr: [ { s: "kick", vol: 100, p: "1000100010001000…" }, … ] }
+  //   { v: 2, bpm: 120,
+  //     tr: [ { s: "kick", vol: 100, p: "1000100010001000…" }, …,
+  //           { s: "bass", vol: 100, p: "1000…", n: "a..m…" } ] }
   // p = one character per step: 0 = off, 1 = loud … 4 = barely there.
+  // n (bass only) = one character per step: a = E1, b = F1 … y = E3, . = no note.
+  // v1 links (before bass) still load — they just have an empty bass line.
   // New features (more sounds, flams, rolls…) get new optional fields and a
   // higher v; older links keep loading because missing fields use defaults.
   //
@@ -902,13 +1140,19 @@
 
   function getState() {
     return {
-      v: 1, bpm,
-      tr: VOICES.map(v => ({ s: v.id, vol: mix[v.id], p: patterns[v.id].join('') })),
+      v: 2, bpm,
+      tr: VOICES.map(v => {
+        const t = { s: v.id, vol: mix[v.id], p: patterns[v.id].join('') };
+        if (v.id === 'bass') {
+          t.n = notes.map((n, i) => patterns.bass[i] ? String.fromCharCode(97 + n - LOW) : '.').join('');
+        }
+        return t;
+      }),
     };
   }
   function applyState(st) {
     if (!st || typeof st !== 'object') throw new Error('bad beat');
-    if (st.v > 1) toast('This beat was made with a newer version; some parts may be missing');
+    if (st.v > 2) toast('This beat was made with a newer version; some parts may be missing');
     const tracks = Array.isArray(st.tr) ? st.tr : [];
     VOICES.forEach(v => {
       const t = tracks.find(x => x && x.s === v.id);
@@ -920,6 +1164,16 @@
         }
       }
       patterns[v.id] = p;
+      if (v.id === 'bass') {
+        notes = new Array(STEPS).fill(LOW);
+        if (t && typeof t.n === 'string') {
+          for (let i = 0; i < STEPS && i < t.n.length; i++) {
+            const n = t.n.charCodeAt(i) - 97 + LOW;
+            if (n >= LOW && n <= HIGH) notes[i] = n;
+          }
+        }
+        selStep = -1;
+      }
       mix[v.id] = t && Number.isFinite(t.vol) ? Math.max(0, Math.min(100, t.vol)) : 100;
       applyMix(v.id);
     });

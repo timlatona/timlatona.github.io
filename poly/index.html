@@ -236,6 +236,7 @@
       <div class="toggles">
         <button class="toggle" id="click" aria-pressed="false">Click</button>
         <button class="toggle" id="countin" aria-pressed="true">Count-in</button>
+        <button class="toggle" id="bell" aria-pressed="true">Bell on 1</button>
         <span class="beat-now" id="beat-now">–</span>
       </div>
     </section>
@@ -290,7 +291,8 @@
           <li><b>M</b> mutes a line. <b>S</b> solos it.</li>
           <li><b>Click</b> plays a metronome on the counted line, even if that line is muted.</li>
           <li><b>Count-in</b> plays one bar of click before the lines start.</li>
-          <li>The <b>first note of each bar</b> is accented (louder), so you can hear where each line starts over.</li>
+          <li>The <b>first note of each bar</b> is accented: much louder, with a punchier kick and a fuller clap. The other notes are about a third as loud.</li>
+          <li><b>Bell on 1</b> adds a short bell on each line's "1", a low bell for the kick and a high bell for the clap. It's the easiest way to hear the bars drift apart in polymeter. Turn it off once you can hear the starts without it.</li>
         </ul>
       </div>
     </details>
@@ -337,7 +339,7 @@
   // ===================================================================
   const MIN_N = 2, MAX_N = 9;
   const S = {
-    mode: 'r', bpm: 80, ref: 'a', click: false, countIn: true,
+    mode: 'r', bpm: 80, ref: 'a', click: false, countIn: true, bell: true,
     a: { n: 3, u: 1, vol: 90, mute: false, solo: false },
     b: { n: 4, u: 1, vol: 90, mute: false, solo: false },
   };
@@ -437,15 +439,16 @@
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
     return g;
   }
-  function kick(t, out, lvl) {
+  // acc = this is the line's "1": louder AND a different sound, so the start of each bar stands out
+  function kick(t, out, lvl, acc) {
     const o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(150, t);
-    o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
-    const g = env(t, lvl, 0.45);
-    o.connect(g).connect(out); o.start(t); o.stop(t + 0.5);
-    const c = ctx.createOscillator(); c.type = 'triangle'; c.frequency.value = 1200;
-    const cg = env(t, lvl * 0.25, 0.012);
-    c.connect(cg).connect(out); c.start(t); c.stop(t + 0.03);
+    o.frequency.setValueAtTime(acc ? 190 : 140, t);
+    o.frequency.exponentialRampToValueAtTime(acc ? 40 : 48, t + (acc ? 0.16 : 0.1));
+    const g = env(t, lvl, acc ? 0.6 : 0.3);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.65);
+    const c = ctx.createOscillator(); c.type = 'triangle'; c.frequency.value = acc ? 1600 : 1200;
+    const cg = env(t, lvl * (acc ? 0.6 : 0.2), acc ? 0.02 : 0.01);
+    c.connect(cg).connect(out); c.start(t); c.stop(t + 0.04);
   }
   function noiseHit(t, out, peak, decay, freq, q) {
     const src = ctx.createBufferSource(); src.buffer = noiseBuf;
@@ -455,9 +458,31 @@
     src.start(t, Math.random() * 0.5); src.stop(t + decay + 0.02);
   }
   // clap: three quick bursts and a short tail
-  function clap(t, out, lvl) {
+  function clap(t, out, lvl, acc) {
     for (let i = 0; i < 3; i++) noiseHit(t + i * 0.011, out, lvl * 0.9, 0.025, 1100, 1.1);
-    noiseHit(t + 0.03, out, lvl * 0.7, 0.16, 1200, 0.9);
+    noiseHit(t + 0.03, out, lvl * 0.7, acc ? 0.24 : 0.12, 1200, 0.9);
+    if (acc) {                                   // add a snare-like body on the 1
+      const o = ctx.createOscillator(); o.type = 'triangle';
+      o.frequency.setValueAtTime(230, t); o.frequency.exponentialRampToValueAtTime(160, t + 0.08);
+      const g = env(t, lvl * 0.7, 0.14);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.18);
+    }
+  }
+  // "Bell on 1": a short cowbell-like ping, lower for the kick line, higher for the clap line
+  function bell(t, out, id) {
+    const base = id === 'a' ? 560 : 840;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = base * 1.6; f.Q.value = 2;
+    const g = env(t, 0.32, 0.28);
+    f.connect(g).connect(out);
+    [base, base * 1.48].forEach(fr => {
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = fr;
+      o.connect(f); o.start(t); o.stop(t + 0.3);
+    });
+  }
+  const ACCENT = 1, NORMAL = 0.32;     // other notes about a third as loud as the 1
+  function hit(id, t, first) {
+    SOUND[id](t, lineOut[id], first ? ACCENT : NORMAL, first);
+    if (first && S.bell) bell(t, lineOut[id], id);
   }
   function clickSound(t, accent) {
     const o = ctx.createOscillator(); o.type = 'sine';
@@ -501,8 +526,8 @@
       if (t > horizon) break;
       const late = t < ctx.currentTime - 0.05;   // fell behind (busy phone): skip, don't burst
       const hitA = Math.abs(beats.a - m) < EPS, hitB = Math.abs(beats.b - m) < EPS, hitC = Math.abs(beats.c - m) < EPS;
-      if (hitA) { if (!late) SOUND.a(t, lineOut.a, next.a % ga.n === 0 ? 1 : 0.55); next.a++; }
-      if (hitB) { if (!late) SOUND.b(t, lineOut.b, next.b % gb.n === 0 ? 1 : 0.55); next.b++; }
+      if (hitA) { if (!late) hit('a', t, next.a % ga.n === 0); next.a++; }
+      if (hitB) { if (!late) hit('b', t, next.b % gb.n === 0); next.b++; }
       if (hitC) {
         const k = next.c;
         if (!late && (S.click || k < 0)) clickSound(t, ((k % cg.n) + cg.n) % cg.n === 0);
@@ -645,10 +670,12 @@
     });
     document.getElementById('click').setAttribute('aria-pressed', S.click);
     document.getElementById('countin').setAttribute('aria-pressed', S.countIn);
+    document.getElementById('bell').setAttribute('aria-pressed', S.bell);
     sizeCanvas();
   }
   document.getElementById('click').addEventListener('click', () => { S.click = !S.click; paintAll(); changed(); });
   document.getElementById('countin').addEventListener('click', () => { S.countIn = !S.countIn; paintAll(); changed(); });
+  document.getElementById('bell').addEventListener('click', () => { S.bell = !S.bell; paintAll(); changed(); });
 
   // presets
   const presetSel = document.getElementById('preset');
@@ -815,7 +842,7 @@
   const unb64 = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
   function getState() {
     const L = x => ({ n: x.n, u: x.u, vol: x.vol, mute: x.mute ? 1 : 0, solo: x.solo ? 1 : 0 });
-    return { v: 1, mode: S.mode, bpm: S.bpm, ref: S.ref, click: S.click ? 1 : 0, ci: S.countIn ? 1 : 0, a: L(S.a), b: L(S.b) };
+    return { v: 1, mode: S.mode, bpm: S.bpm, ref: S.ref, click: S.click ? 1 : 0, ci: S.countIn ? 1 : 0, bell: S.bell ? 1 : 0, a: L(S.a), b: L(S.b) };
   }
   function applyState(st) {
     if (!st || typeof st !== 'object') throw new Error('bad');
@@ -823,6 +850,7 @@
     S.mode = st.mode === 'm' ? 'm' : 'r';
     S.ref = st.ref === 'b' ? 'b' : 'a';
     S.click = !!st.click; S.countIn = st.ci === undefined ? true : !!st.ci;
+    S.bell = st.bell === undefined ? true : !!st.bell;
     ['a', 'b'].forEach(id => {
       const x = st[id] || {};
       S[id].n = clampN(x.n);

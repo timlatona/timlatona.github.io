@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16161a">
+<title>Polyrhythm Lab</title>
+<style>
+  :root{
+    --bg: #16161a;
+    --panel: #212127;
+    --step: #2e2e36;
+    --step-beat: #3a3a44;
+    --text: #e8e8ec;
+    --muted: #8a8a96;
+    --accent: #ff6a2b;
+    --a: #ff6a2b;
+    --b: #4aa8ff;
+    --click: #f4f4f6;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{ margin: 0; background: var(--bg); color: var(--text); }
+  body{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100dvh;
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .app{ max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  .col{ display: contents; }
+  button{
+    font: inherit; color: var(--text); background: var(--step);
+    border: 0; border-radius: 10px; cursor: pointer;
+  }
+  button:active{ filter: brightness(1.3); }
+  button:disabled{ opacity: .35; cursor: default; }
+
+  header{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  h1{ font-size: 18px; margin: 0; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+  .actions{ display: flex; gap: 6px; }
+  .actions a, .actions button{
+    height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; border-radius: 10px;
+    display: inline-flex; align-items: center; background: var(--step); color: var(--text); text-decoration: none;
+  }
+
+  /* ---------- lock switch ---------- */
+  .lock{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    background: var(--panel); border-radius: 12px; padding: 4px;
+  }
+  .lock button{
+    background: transparent; color: var(--muted); padding: 5px 6px; line-height: 1.15;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+  .lock button b{ font-size: 14px; }
+  .lock button span{ font-size: 11px; }
+  .lock button[aria-pressed="true"]{ background: var(--step-beat); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+
+  .preset-row{ display: flex; gap: 8px; align-items: center; }
+  select{
+    flex: 1; min-width: 0; height: 38px; border-radius: 10px; border: 0; padding: 0 10px;
+    background: var(--step); color: var(--text); font: inherit; font-size: 15px;
+  }
+  .tip{ font-size: 13px; color: var(--muted); margin: -2px 2px 0; }
+  .tip:empty{ display: none; }
+
+  /* ---------- view ---------- */
+  .view{ background: var(--panel); border-radius: 14px; padding: 8px 8px 6px; position: relative; }
+  canvas{ display: block; width: 100%; height: 104px; }
+  .status{
+    display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted);
+    padding: 4px 4px 0; font-variant-numeric: tabular-nums;
+  }
+  .status b{ color: var(--text); font-weight: 600; }
+
+  /* ---------- lines ---------- */
+  .line{
+    background: var(--panel); border-radius: 14px; padding: 8px 12px;
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center;
+  }
+  .line[data-line="a"]{ --c: var(--a); }
+  .line[data-line="b"]{ --c: var(--b); }
+  .line-name{ display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; min-width: 0; }
+  .line-name .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+  .line-name small{ font-weight: 500; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .line-ctl{ display: flex; align-items: center; gap: 6px; }
+  .stepper{ display: flex; align-items: center; background: var(--step); border-radius: 10px; }
+  .stepper button{ width: 36px; height: 36px; background: transparent; font-size: 18px; }
+  .stepper .n{ min-width: 2.6ch; text-align: center; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .unit{ height: 36px; min-width: 40px; font-size: 18px; }
+  .unit[hidden]{ display: none; }
+  .ms{ height: 36px; width: 36px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .ms[aria-pressed="true"]{ color: #111; }
+  .ms.mute[aria-pressed="true"]{ background: #d9534f; }
+  .ms.solo[aria-pressed="true"]{ background: #f2c94c; }
+  .line-bottom{ grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+  .count-btn{
+    height: 30px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--muted);
+    border: 1px solid var(--step-beat); background: transparent; white-space: nowrap;
+  }
+  .count-btn[aria-pressed="true"]{ background: var(--c); color: #111; border-color: transparent; }
+  .line input[type=range]{ flex: 1; accent-color: var(--c); height: 28px; margin: 0; min-width: 0; }
+
+  /* ---------- transport ---------- */
+  .transport{
+    background: var(--panel); border-radius: 14px; padding: 10px 12px;
+    display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center;
+  }
+  #play{
+    width: 60px; height: 60px; border-radius: 50%; grid-row: span 2;
+    background: var(--accent); color: #111; display: grid; place-items: center;
+  }
+  #play svg{ width: 24px; height: 24px; }
+  .tempo-row{ display: flex; align-items: center; gap: 6px; }
+  .bpm{ font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .bpm-label{ font-size: 11px; color: var(--muted); margin-right: auto; line-height: 1.15; white-space: nowrap; }
+  .tempo-row button{ height: 34px; min-width: 38px; padding: 0 8px; font-size: 16px; }
+  #tap{ font-size: 13px; }
+  #tempo{ width: 100%; accent-color: var(--accent); height: 26px; margin: 0; }
+  .toggles{ grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; }
+  .toggle{ height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .toggle[aria-pressed="true"]{ background: var(--step-beat); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+  .beat-now{
+    margin-left: auto; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums;
+    min-width: 2ch; text-align: right; color: var(--muted);
+  }
+  .beat-now.on{ color: var(--text); }
+  .beat-now small{ font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top));
+    transform: translate(-50%, -20px); opacity: 0; pointer-events: none;
+    background: var(--text); color: #111; font-size: 14px; font-weight: 600;
+    padding: 10px 16px; border-radius: 999px; transition: opacity .2s, transform .2s; z-index: 20;
+    max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show{ opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- how to use ---------- */
+  .help{ margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .help h2{ font-size: 13px; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .help details{ background: var(--panel); border-radius: 12px; }
+  .help summary{
+    list-style: none; cursor: pointer; padding: 13px 14px;
+    display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600;
+  }
+  .help summary::-webkit-details-marker{ display: none; }
+  .help summary .ico{ width: 22px; text-align: center; flex: none; }
+  .help summary::after{
+    content: "›"; margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1;
+    transition: transform .15s;
+  }
+  .help details[open] summary::after{ transform: rotate(90deg); }
+  .help .body{ padding: 0 14px 14px 46px; font-size: 14px; line-height: 1.5; color: #c9c9d1; user-select: text; -webkit-user-select: text; }
+  .help .body p{ margin: 0 0 8px; }
+  .help .body p:last-child{ margin: 0; }
+  .help .body ul, .help .body ol{ margin: 0 0 8px; padding-left: 18px; }
+  .help .body li{ margin: 3px 0; }
+  .help b{ color: var(--text); }
+  .help pre{
+    margin: 4px 0 8px; font-size: 12px; line-height: 1.45; background: var(--bg); border-radius: 8px;
+    padding: 8px 10px; overflow-x: auto; color: var(--text);
+  }
+
+  .transport > *{ min-width: 0; }
+  /* small phones (iPhone SE and similar) */
+  @media (max-width: 380px), (orientation: landscape) and (max-width: 600px){
+    #play{ width: 50px; height: 50px; }
+    .tempo-row{ gap: 4px; }
+    .tempo-row button{ min-width: 30px; padding: 0 5px; }
+    .bpm{ font-size: 22px; }
+    #tap{ font-size: 12px; }
+    .stepper button{ width: 30px; }
+    .ms{ width: 32px; }
+    .unit{ min-width: 34px; }
+    h1{ font-size: 15px; }
+  }
+
+  @media (orientation: landscape) and (max-width: 600px){ h1{ display: none; } header{ justify-content: flex-end; } }
+
+  /* phone sideways */
+  @media (orientation: landscape) and (max-height: 500px){
+    body{ padding-top: max(8px, env(safe-area-inset-top)); }
+    .app{ display: grid; grid-template-columns: minmax(260px, 1fr) 1.4fr; max-width: none; gap: 8px 12px; align-items: start; }
+    .col{ display: flex; flex-direction: column; gap: 8px; }
+    canvas{ height: 92px; }
+    h1{ font-size: 15px; }
+    .transport > *{ min-width: 0; }
+    #play{ width: 52px; height: 52px; }
+    .tempo-row{ gap: 4px; }
+    .tempo-row button{ min-width: 32px; padding: 0 6px; }
+    .actions a, .actions button{ padding: 0 10px; white-space: nowrap; }
+    .help{ grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="col">
+    <header>
+      <h1>Polyrhythm Lab</h1>
+      <div class="actions">
+        <a href="../drums/">Drums</a>
+        <button id="share">⤴ Share</button>
+      </div>
+    </header>
+
+    <div class="lock" role="group" aria-label="Lock">
+      <button id="mode-r" aria-pressed="true"><b>Same bar</b><span>Polyrhythm</span></button>
+      <button id="mode-m" aria-pressed="false"><b>Same pulse</b><span>Polymeter</span></button>
+    </div>
+
+    <div class="preset-row">
+      <select id="preset" aria-label="Presets"></select>
+    </div>
+    <div class="tip" id="tip"></div>
+
+    <section class="transport">
+      <button id="play" aria-label="Play">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path id="play-icon" d="M7 4l13 8-13 8z"/></svg>
+      </button>
+      <div class="tempo-row">
+        <span class="bpm" id="bpm">80</span>
+        <span class="bpm-label" id="bpm-label">BPM</span>
+        <button id="minus" aria-label="Tempo down">−</button>
+        <button id="plus" aria-label="Tempo up">+</button>
+        <button id="tap">Tap</button>
+      </div>
+      <input type="range" id="tempo" min="30" max="200" value="80" aria-label="Tempo">
+      <div class="toggles">
+        <button class="toggle" id="click" aria-pressed="false">Click</button>
+        <button class="toggle" id="countin" aria-pressed="true">Count-in</button>
+        <span class="beat-now" id="beat-now">–</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="view">
+      <canvas id="view" aria-label="Timeline of both lines"></canvas>
+      <div class="status"><span id="status-l"></span><span id="status-r"></span></div>
+    </section>
+
+    <section class="line" data-line="a" id="line-a"></section>
+    <section class="line" data-line="b" id="line-b"></section>
+  </div>
+
+  <section class="help" aria-label="How to use">
+    <h2>How to use</h2>
+
+    <details>
+      <summary><span class="ico">⚖️</span>Polyrhythm vs. polymeter</summary>
+      <div class="body">
+        <p><b>Polyrhythm: same bar, different number of notes.</b> "4 over 3" means 4 evenly spaced notes in the time of 3 beats. Both lines start together, and in 4:3 they only meet on the "1".</p>
+        <pre>count  1 2 3 4 5 6 7 8 9 10 11 12
+4 →    X · · X · · X · · X  ·  ·
+3 →    X · · · X · · · X  ·  ·  ·</pre>
+        <p><b>Polymeter: same pulse, different bar length.</b> Both lines count the same note value, but one bar is longer than the other. The bars drift apart and line back up later. 5/4 against 7/8 is 10 eighths against 7, so they realign after 70 eighths: 7 bars of 5/4 or 10 bars of 7/8.</p>
+        <p>The <b>Lock</b> switch at the top flips between the two using the same numbers. Try 4 and 3 in both modes and listen to the difference.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🥁</span>How to practice</summary>
+      <div class="body">
+        <ol>
+          <li><b>Listen to each line alone.</b> Tap <b>S</b> (solo) on the kick, then on the clap.</li>
+          <li><b>Listen to both</b> and watch where they meet. The view flashes when they hit together.</li>
+          <li><b>Mute the line you'll play</b> (<b>M</b>), turn on <b>Click</b>, and play that line yourself on a pad or kit.</li>
+          <li><b>Switch which line you count.</b> Tap <b>Count</b> on the other line. The same rhythm feels completely different when the other line is the beat.</li>
+          <li>Start slow. Speed up only when it feels easy.</li>
+        </ol>
+        <p>Use headphones. The kick is slightly left and the clap slightly right, which makes the two lines easier to hear apart.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🎛</span>The controls</summary>
+      <div class="body">
+        <ul>
+          <li><b>− / +</b> on each line sets its number of notes (polyrhythm) or beats per bar (polymeter), from 2 to 9.</li>
+          <li><b>♩ / ♪</b> (polymeter only) sets whether a line counts quarter notes or eighth notes. For example, 5 ♩ is a bar of 5/4 and 7 ♪ is a bar of 7/8.</li>
+          <li><b>Count</b> marks the line you're counting. The tempo is that line's beat, and Click and Count-in play on it. The big number at the bottom right counts it for you.</li>
+          <li><b>M</b> mutes a line. <b>S</b> solos it.</li>
+          <li><b>Click</b> plays a metronome on the counted line, even if that line is muted.</li>
+          <li><b>Count-in</b> plays one bar of click before the lines start.</li>
+          <li>The <b>first note of each bar</b> is accented (louder), so you can hear where each line starts over.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">👁</span>Reading the view</summary>
+      <div class="body">
+        <p>Time runs left to right, and the white line is the playhead. The top row is the kick and the bottom row is the clap. Bigger marks are each line's "1".</p>
+        <p><b>Polyrhythm:</b> the view shows one bar. Faint lines are the beats of the counted line. A connector joins the two rows wherever both lines hit at the same moment.</p>
+        <p><b>Polymeter:</b> the view shows the whole stretch until the lines line up again. Tall marks are bar lines. Watch them drift apart and come back together. The status line says how many bars until they meet.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">🗣</span>Saying it out loud</summary>
+      <div class="body">
+        <p>Drummers often learn a polyrhythm by saying a phrase whose syllables land on the combined rhythm of both hands:</p>
+        <ul>
+          <li><b>3 over 2:</b> "not dif-fi-cult": hands together on "not", then right, left, right.</li>
+          <li><b>4 over 3 / 3 over 4:</b> "pass the gol-den but-ter".</li>
+        </ul>
+        <p>Or count the shared grid: 6 for 3:2, 12 for 4:3, 20 for 5:4. Accent the numbers where each line lands.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary><span class="ico">⤴</span>Sharing</summary>
+      <div class="body">
+        <p>The page address always holds your current setup: mode, numbers, tempo, counted line and volumes. Tap <b>⤴ Share</b> to send it, or bookmark it.</p>
+      </div>
+    </details>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  // ===================================================================
+  // State
+  //   mode 'r' = polyrhythm (same bar), 'm' = polymeter (same pulse)
+  //   each line: n (2–9), u (polymeter note value: 1 = quarter, 0.5 = eighth)
+  //   ref = which line is counted (tempo + click follow it)
+  // ===================================================================
+  const MIN_N = 2, MAX_N = 9;
+  const S = {
+    mode: 'r', bpm: 80, ref: 'a', click: false, countIn: true,
+    a: { n: 3, u: 1, vol: 90, mute: false, solo: false },
+    b: { n: 4, u: 1, vol: 90, mute: false, solo: false },
+  };
+  const NAMES = { a: 'Kick', b: 'Clap' };
+  const other = id => id === 'a' ? 'b' : 'a';
+
+  const PRESETS = [
+    { label: '— Polyrhythms (same bar) —' },
+    { label: '3 over 2 (hemiola)', mode: 'r', a: 2, b: 3, tip: 'Count the kick (2). The clap fits 3 into the same space.' },
+    { label: '4 over 3',  mode: 'r', a: 3, b: 4, tip: 'Count 3. Let the 4 float over it.' },
+    { label: '3 over 4',  mode: 'r', a: 4, b: 3, tip: 'Count 4. The clap stretches 3 notes across the bar.' },
+    { label: '5 over 4',  mode: 'r', a: 4, b: 5, tip: 'Count 4. The 5 lands slightly ahead of each beat, then catches up.' },
+    { label: '5 over 3',  mode: 'r', a: 3, b: 5, tip: 'Count 3. Listen for where the 5 crosses the second beat.' },
+    { label: '7 over 4',  mode: 'r', a: 4, b: 7, tip: 'Count 4. Feel the 7 as "almost 8" that is slightly too slow.' },
+    { label: '7 over 5',  mode: 'r', a: 5, b: 7, tip: 'Advanced. Count 5 and only listen for the shared 1.' },
+    { label: '— Polymeters (same pulse) —' },
+    { label: '3/4 over 4/4', mode: 'm', a: [4, 1], b: [3, 1], tip: 'Same quarter note. Back together every 12 beats (3 bars of 4).' },
+    { label: '5/4 over 4/4', mode: 'm', a: [4, 1], b: [5, 1], tip: 'Back together every 20 beats (5 bars of 4).' },
+    { label: '7/8 over 4/4', mode: 'm', a: [4, 1], b: [7, .5], tip: 'The 7/8 bar is one eighth short, so it drifts earlier each bar.' },
+    { label: '9/8 over 4/4', mode: 'm', a: [4, 1], b: [9, .5], tip: 'One eighth long each bar. Back together after 9 bars of 4/4.' },
+    { label: '5/4 over 7/8', mode: 'm', a: [7, .5], b: [5, 1], tip: '10 eighths against 7: back together after 7 bars of 5/4 (10 bars of 7/8).' },
+  ];
+
+  // ===================================================================
+  // Timing (in "beats" = the counted line's pulse for polyrhythm,
+  // quarter notes for polymeter)
+  // ===================================================================
+  const gcd = (x, y) => y ? gcd(y, x % y) : x;
+  const lcm = (x, y) => x / gcd(x, y) * y;
+
+  function lineGeom(id) {
+    const L = S[id];
+    if (S.mode === 'r') {
+      const cycle = S[S.ref].n;                 // the counted line's notes are beats
+      return { n: L.n, d: cycle / L.n, bar: cycle };
+    }
+    return { n: L.n, d: L.u, bar: L.n * L.u };
+  }
+  // length of the view: one bar (polyrhythm) or until the bars line up again (polymeter)
+  function period() {
+    if (S.mode === 'r') return S[S.ref].n;
+    const a8 = S.a.n * S.a.u * 2, b8 = S.b.n * S.b.u * 2;   // in eighths
+    return lcm(a8, b8) / 2;
+  }
+
+  // ===================================================================
+  // Audio
+  // ===================================================================
+  let ctx = null, noiseBuf = null, master = null;
+  const lineOut = {};
+  let clickOut = null;
+
+  function ensureAudio() {
+    if (!ctx) {
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+      ['a', 'b'].forEach(id => {
+        const g = ctx.createGain();
+        let tail = g;
+        if (ctx.createStereoPanner) {               // kick a little left, clap a little right
+          const p = ctx.createStereoPanner(); p.pan.value = id === 'a' ? -0.35 : 0.35;
+          g.connect(p); tail = p;
+        }
+        tail.connect(master);
+        lineOut[id] = g;
+      });
+      clickOut = ctx.createGain(); clickOut.gain.value = 0.5; clickOut.connect(master);
+      applyLevels();
+    }
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  }
+  function resetAudio() {
+    if (!ctx) return;
+    try { ctx.close(); } catch (e) {}
+    ctx = null;
+  }
+  function audible(id) {
+    const anySolo = S.a.solo || S.b.solo;
+    return anySolo ? S[id].solo : !S[id].mute;
+  }
+  function applyLevels() {
+    if (!ctx) return;
+    ['a', 'b'].forEach(id => {
+      const v = audible(id) ? Math.pow(S[id].vol / 100, 2) : 0;
+      lineOut[id].gain.setTargetAtTime(v, ctx.currentTime, 0.01);
+    });
+  }
+
+  function env(t, peak, decay) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    return g;
+  }
+  function kick(t, out, lvl) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+    const g = env(t, lvl, 0.45);
+    o.connect(g).connect(out); o.start(t); o.stop(t + 0.5);
+    const c = ctx.createOscillator(); c.type = 'triangle'; c.frequency.value = 1200;
+    const cg = env(t, lvl * 0.25, 0.012);
+    c.connect(cg).connect(out); c.start(t); c.stop(t + 0.03);
+  }
+  function noiseHit(t, out, peak, decay, freq, q) {
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+    const g = env(t, peak, decay);
+    src.connect(f).connect(g).connect(out);
+    src.start(t, Math.random() * 0.5); src.stop(t + decay + 0.02);
+  }
+  // clap: three quick bursts and a short tail
+  function clap(t, out, lvl) {
+    for (let i = 0; i < 3; i++) noiseHit(t + i * 0.011, out, lvl * 0.9, 0.025, 1100, 1.1);
+    noiseHit(t + 0.03, out, lvl * 0.7, 0.16, 1200, 0.9);
+  }
+  function clickSound(t, accent) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.value = accent ? 1760 : 1320;
+    const g = env(t, accent ? 0.9 : 0.55, 0.035);
+    o.connect(g).connect(clickOut); o.start(t); o.stop(t + 0.05);
+  }
+  const SOUND = { a: kick, b: clap };
+
+  // ===================================================================
+  // Scheduler: each line on its own clock, positions in beats, mapped to
+  // audio time through an anchor so tempo changes don't jump.
+  // ===================================================================
+  let playing = false, timer = null;
+  let anchorTime = 0, anchorBeat = 0, spb = 60 / S.bpm;
+  const next = { a: 0, b: 0, c: 0 };      // next index for kick, clap, click
+  let clickStart = 0;                      // first click index (negative during count-in)
+  const flashes = [];                      // audio times when both lines hit together
+  const beatToTime = b => anchorTime + (b - anchorBeat) * spb;
+  const beatAt = t => anchorBeat + (t - anchorTime) / spb;
+
+  function clickGeom() {
+    const g = lineGeom(S.ref);
+    return { d: g.d, n: g.n };
+  }
+  function resetPositions(withCountIn) {
+    const cg = clickGeom();
+    clickStart = withCountIn ? -cg.n : 0;
+    next.a = 0; next.b = 0; next.c = clickStart;
+    anchorBeat = clickStart * cg.d;
+    anchorTime = ctx.currentTime + 0.08;
+  }
+  const EPS = 1e-7;
+  function schedule() {
+    const horizon = ctx.currentTime + 0.12;
+    for (let guard = 0; guard < 64; guard++) {
+      const ga = lineGeom('a'), gb = lineGeom('b'), cg = clickGeom();
+      const beats = { a: next.a * ga.d, b: next.b * gb.d, c: next.c * cg.d };
+      const m = Math.min(beats.a, beats.b, beats.c);
+      const t = beatToTime(m);
+      if (t > horizon) break;
+      const late = t < ctx.currentTime - 0.05;   // fell behind (busy phone): skip, don't burst
+      const hitA = Math.abs(beats.a - m) < EPS, hitB = Math.abs(beats.b - m) < EPS, hitC = Math.abs(beats.c - m) < EPS;
+      if (hitA) { if (!late) SOUND.a(t, lineOut.a, next.a % ga.n === 0 ? 1 : 0.55); next.a++; }
+      if (hitB) { if (!late) SOUND.b(t, lineOut.b, next.b % gb.n === 0 ? 1 : 0.55); next.b++; }
+      if (hitC) {
+        const k = next.c;
+        if (!late && (S.click || k < 0)) clickSound(t, ((k % cg.n) + cg.n) % cg.n === 0);
+        next.c++;
+      }
+      if (hitA && hitB && audible('a') && audible('b')) flashes.push(t);
+    }
+  }
+
+  const playBtn = document.getElementById('play');
+  const icon = document.getElementById('play-icon');
+  function start() {
+    ensureAudio();
+    playing = true;
+    spb = 60 / S.bpm;
+    resetPositions(S.countIn);
+    schedule();
+    timer = setInterval(schedule, 25);
+    icon.setAttribute('d', 'M6 5h4v14H6zM14 5h4v14h-4z');
+    playBtn.setAttribute('aria-label', 'Stop');
+    requestAnimationFrame(draw);
+  }
+  function stop() {
+    playing = false;
+    clearInterval(timer);
+    icon.setAttribute('d', 'M7 4l13 8-13 8z');
+    playBtn.setAttribute('aria-label', 'Play');
+    flashes.length = 0;
+    requestAnimationFrame(draw);
+  }
+  // numbers / mode / counted line changed while playing: start over from the 1, no count-in
+  function restartIfPlaying() {
+    if (!playing) return;
+    resetPositions(false);
+  }
+  playBtn.addEventListener('click', () => playing ? stop() : start());
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !e.target.closest('button, select, input')) { e.preventDefault(); playing ? stop() : start(); }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (playing) stop(); }
+    else if (ctx && ctx.state !== 'running') resetAudio();
+  });
+  window.addEventListener('pagehide', () => { if (playing) stop(); });
+  window.addEventListener('pageshow', e => { if (e.persisted) resetAudio(); });
+
+  // ===================================================================
+  // Tempo
+  // ===================================================================
+  const bpmEl = document.getElementById('bpm');
+  const slider = document.getElementById('tempo');
+  function setBpm(v) {
+    S.bpm = Math.max(30, Math.min(200, Math.round(v)));
+    bpmEl.textContent = S.bpm;
+    slider.value = S.bpm;
+    if (playing && ctx) {            // keep our place in the bar, change speed from here
+      const now = ctx.currentTime;
+      anchorBeat = beatAt(now); anchorTime = now;
+    }
+    spb = 60 / S.bpm;
+    changed();
+  }
+  slider.addEventListener('input', () => setBpm(+slider.value));
+  document.getElementById('minus').addEventListener('click', () => setBpm(S.bpm - 1));
+  document.getElementById('plus').addEventListener('click', () => setBpm(S.bpm + 1));
+  let taps = [];
+  document.getElementById('tap').addEventListener('click', () => {
+    const t = performance.now();
+    if (taps.length && t - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(t);
+    if (taps.length > 5) taps.shift();
+    if (taps.length >= 2) setBpm(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+  });
+
+  // ===================================================================
+  // UI
+  // ===================================================================
+  const modeR = document.getElementById('mode-r'), modeM = document.getElementById('mode-m');
+  function setMode(m) {
+    S.mode = m;
+    paintAll(); restartIfPlaying(); changed();
+  }
+  modeR.addEventListener('click', () => setMode('r'));
+  modeM.addEventListener('click', () => setMode('m'));
+
+  const lineEls = {};
+  function buildLine(id) {
+    const el = document.getElementById('line-' + id);
+    el.innerHTML = `
+      <div class="line-name"><span class="dot"></span>${NAMES[id]} <small class="desc"></small></div>
+      <div class="line-ctl">
+        <div class="stepper">
+          <button class="dn" aria-label="Fewer">−</button><span class="n"></span><button class="up" aria-label="More">+</button>
+        </div>
+        <button class="unit" aria-label="Note value"></button>
+        <button class="ms mute" aria-label="Mute ${NAMES[id]}">M</button>
+        <button class="ms solo" aria-label="Solo ${NAMES[id]}">S</button>
+      </div>
+      <div class="line-bottom">
+        <button class="count-btn" aria-label="Count this line">Count</button>
+        <input type="range" min="0" max="100" aria-label="${NAMES[id]} volume">
+      </div>`;
+    const q = s => el.querySelector(s);
+    const L = S[id];
+    const setN = v => { L.n = Math.max(MIN_N, Math.min(MAX_N, v)); presetSel.value = ''; tipEl.textContent = ''; paintAll(); restartIfPlaying(); changed(); };
+    q('.dn').addEventListener('click', () => setN(L.n - 1));
+    q('.up').addEventListener('click', () => setN(L.n + 1));
+    q('.unit').addEventListener('click', () => { L.u = L.u === 1 ? 0.5 : 1; presetSel.value = ''; tipEl.textContent = ''; paintAll(); restartIfPlaying(); changed(); });
+    q('.mute').addEventListener('click', () => { L.mute = !L.mute; paintAll(); applyLevels(); changed(); });
+    q('.solo').addEventListener('click', () => { L.solo = !L.solo; paintAll(); applyLevels(); changed(); });
+    q('.count-btn').addEventListener('click', () => { if (S.ref === id) return; S.ref = id; paintAll(); restartIfPlaying(); changed(); });
+    const vol = q('input');
+    vol.addEventListener('input', () => { L.vol = +vol.value; applyLevels(); changed(); });
+    lineEls[id] = { el, q };
+  }
+  buildLine('a'); buildLine('b');
+
+  function describe(id) {
+    const L = S[id];
+    if (S.mode === 'm') return `${L.n}/${L.u === 1 ? 4 : 8}`;
+    return S.ref === id ? `${L.n} beats` : `${L.n} over ${S[other(id)].n}`;
+  }
+  function paintAll() {
+    modeR.setAttribute('aria-pressed', S.mode === 'r');
+    modeM.setAttribute('aria-pressed', S.mode === 'm');
+    ['a', 'b'].forEach(id => {
+      const L = S[id], { q } = lineEls[id];
+      q('.n').textContent = L.n;
+      q('.dn').disabled = L.n <= MIN_N; q('.up').disabled = L.n >= MAX_N;
+      const unit = q('.unit');
+      unit.hidden = S.mode !== 'm';
+      unit.textContent = L.u === 1 ? '♩' : '♪';
+      q('.mute').setAttribute('aria-pressed', L.mute);
+      q('.solo').setAttribute('aria-pressed', L.solo);
+      const cb = q('.count-btn');
+      cb.setAttribute('aria-pressed', S.ref === id);
+      cb.textContent = S.ref === id ? '● Counting' : 'Count';
+      q('input').value = L.vol;
+      q('.desc').textContent = describe(id);
+    });
+    document.getElementById('click').setAttribute('aria-pressed', S.click);
+    document.getElementById('countin').setAttribute('aria-pressed', S.countIn);
+    sizeCanvas();
+  }
+  document.getElementById('click').addEventListener('click', () => { S.click = !S.click; paintAll(); changed(); });
+  document.getElementById('countin').addEventListener('click', () => { S.countIn = !S.countIn; paintAll(); changed(); });
+
+  // presets
+  const presetSel = document.getElementById('preset');
+  const tipEl = document.getElementById('tip');
+  presetSel.innerHTML = '<option value="">Presets…</option>' + PRESETS.map((p, i) =>
+    p.mode ? `<option value="${i}">${p.label}</option>` : `<option disabled>${p.label}</option>`).join('');
+  presetSel.addEventListener('change', () => {
+    const p = PRESETS[+presetSel.value];
+    if (!p || !p.mode) return;
+    S.mode = p.mode; S.ref = 'a';
+    if (p.mode === 'r') { S.a.n = p.a; S.b.n = p.b; S.a.u = S.b.u = 1; }
+    else { [S.a.n, S.a.u] = p.a; [S.b.n, S.b.u] = p.b; }
+    S.a.mute = S.b.mute = S.a.solo = S.b.solo = false;
+    tipEl.textContent = p.tip;
+    paintAll(); applyLevels(); restartIfPlaying(); changed();
+  });
+
+  // ===================================================================
+  // View (canvas)
+  // ===================================================================
+  const cv = document.getElementById('view');
+  const g2 = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+  function sizeCanvas() {
+    DPR = window.devicePixelRatio || 1;
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (!playing) draw();
+  }
+  window.addEventListener('resize', sizeCanvas);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const COL = { a: css('--a'), b: css('--b') };
+
+  let flashUntil = 0;
+  function draw() {
+    const P = period();
+    const now = ctx ? ctx.currentTime - (ctx.outputLatency || 0) : 0;
+    const beat = playing ? beatAt(now) : -1;
+    const inCount = playing && beat < 0;
+    const pos = playing && !inCount ? beat % P : -1;
+
+    // flash when both lines hit together
+    while (flashes.length && flashes[0] <= now) { flashes.shift(); flashUntil = performance.now() + 140; }
+    const flashing = performance.now() < flashUntil;
+
+    g2.clearRect(0, 0, W, H);
+    if (flashing) { g2.fillStyle = 'rgba(255,255,255,.10)'; g2.fillRect(0, 0, W, H); }
+    const pad = 12, X = b => pad + (b / P) * (W - pad * 2);
+    const rows = { a: H * 0.36, b: H * 0.78 };
+
+    // beat lines (counted line) for polyrhythm; quarter-note lines for short polymeters
+    const rg = lineGeom(S.ref);
+    g2.lineWidth = 1;
+    if (S.mode === 'r') {
+      for (let k = 0; k <= rg.n; k++) {
+        g2.strokeStyle = k % rg.n === 0 ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.10)';
+        g2.beginPath(); g2.moveTo(X(k * rg.d), 6); g2.lineTo(X(k * rg.d), H - 6); g2.stroke();
+      }
+    }
+
+    // each line
+    ['a', 'b'].forEach(id => {
+      const g = lineGeom(id), y = rows[id];
+      const count = Math.round(P / g.d);
+      const cell = (W - pad * 2) / count;
+      const on = audible(id);
+      // which note was played last
+      const cur = pos >= 0 ? Math.floor(pos / g.d + 1e-9) : -1;
+      g2.strokeStyle = 'rgba(255,255,255,.08)';
+      g2.beginPath(); g2.moveTo(pad, y); g2.lineTo(W - pad, y); g2.stroke();
+      for (let k = 0; k < count; k++) {
+        const x = X(k * g.d);
+        const first = k % g.n === 0;
+        const lit = k === cur;
+        g2.globalAlpha = on ? (lit ? 1 : 0.55) : 0.2;
+        g2.fillStyle = COL[id];
+        if (S.mode === 'r' || cell > 9) {
+          const r = Math.min(cell * 0.32, first ? 9 : 6.5) * (lit ? 1.25 : 1);
+          g2.beginPath(); g2.arc(x, y, Math.max(r, 2.5), 0, Math.PI * 2); g2.fill();
+          if (first && S.mode === 'm') g2.fillRect(x - 1, y - 11, 2, 22);   // bar line
+        } else {
+          // dense polymeter: thin marks, tall bar lines
+          const h = first ? 20 : 8, w = first ? 2.5 : Math.max(1.2, Math.min(cell * 0.55, 4));
+          if (first) g2.globalAlpha = on ? 1 : 0.25;
+          g2.fillRect(x - w / 2, y - h / 2, w, h);
+        }
+      }
+      g2.globalAlpha = 1;
+      // row label
+      g2.fillStyle = 'rgba(232,232,236,.55)';
+      g2.font = '600 10px -apple-system, system-ui, sans-serif';
+      g2.textBaseline = 'bottom';
+      g2.fillText(S.mode === 'm' ? `${NAMES[id]} ${S[id].n}/${S[id].u === 1 ? 4 : 8}` : `${NAMES[id]} ${S[id].n}`, pad - 4, y - 13);
+    });
+
+    // connectors where both lines land together
+    const ga = lineGeom('a'), gb = lineGeom('b');
+    g2.strokeStyle = 'rgba(255,255,255,.45)'; g2.lineWidth = 1.5;
+    const ca = Math.round(P / ga.d);
+    for (let k = 0; k < ca; k++) {
+      const b = k * ga.d, kb = b / gb.d;
+      // polyrhythm: wherever both notes land · polymeter: only where both bars start
+      const both = S.mode === 'r'
+        ? Math.abs(kb - Math.round(kb)) < 1e-6
+        : k % ga.n === 0 && Math.abs((b / gb.bar) - Math.round(b / gb.bar)) < 1e-6;
+      if (both) {
+        g2.beginPath(); g2.moveTo(X(b), rows.a + 9); g2.lineTo(X(b), rows.b - 9); g2.stroke();
+      }
+    }
+
+    // playhead
+    if (pos >= 0) {
+      g2.strokeStyle = '#fff'; g2.lineWidth = 2;
+      g2.beginPath(); g2.moveTo(X(pos), 4); g2.lineTo(X(pos), H - 4); g2.stroke();
+    }
+
+    paintStatus(beat, inCount, pos, P);
+    if (playing) requestAnimationFrame(draw);
+  }
+
+  const statusL = document.getElementById('status-l'), statusR = document.getElementById('status-r');
+  const beatNow = document.getElementById('beat-now');
+  function paintStatus(beat, inCount, pos, P) {
+    const rg = lineGeom(S.ref);
+    if (!playing) {
+      beatNow.className = 'beat-now'; beatNow.textContent = '–';
+      if (S.mode === 'r') {
+        const g = gcd(S.a.n, S.b.n);
+        statusL.innerHTML = `<b>${S.b.n}:${S.a.n}</b> in one bar`;
+        statusR.textContent = g === 1 ? 'together only on 1' : `together ${g}× per bar`;
+      } else {
+        const a8 = S.a.n * S.a.u * 2, b8 = S.b.n * S.b.u * 2, L = lcm(a8, b8);
+        statusL.innerHTML = `<b>${S.a.n}/${S.a.u === 1 ? 4 : 8}</b> vs <b>${S.b.n}/${S.b.u === 1 ? 4 : 8}</b>`;
+        statusR.textContent = `realign every ${L / a8} bars of ${NAMES.a.toLowerCase()} · ${L / b8} of ${NAMES.b.toLowerCase()}`;
+      }
+      return;
+    }
+    // big count of the counted line
+    const k = Math.floor(beat / rg.d + 1e-9);
+    const inBar = ((k % rg.n) + rg.n) % rg.n + 1;
+    beatNow.className = 'beat-now on';
+    beatNow.innerHTML = inCount ? `${inBar}<small> in</small>` : `${inBar}<small>/${rg.n}</small>`;
+    if (inCount) { statusL.innerHTML = '<b>Count-in…</b>'; statusR.textContent = ''; return; }
+    if (S.mode === 'r') {
+      statusL.innerHTML = `Bar <b>${Math.floor(beat / P) + 1}</b>`;
+      statusR.textContent = `counting ${NAMES[S.ref].toLowerCase()} (${rg.n})`;
+    } else {
+      const ga = lineGeom('a'), gb = lineGeom('b');
+      const barA = Math.floor(pos / ga.bar) + 1, barsA = P / ga.bar;
+      const barB = Math.floor(pos / gb.bar) + 1, barsB = P / gb.bar;
+      const refBars = S.ref === 'a' ? barsA : barsB, refBar = S.ref === 'a' ? barA : barB;
+      const left = refBars - refBar + 1;
+      statusL.innerHTML = `${NAMES.a} <b>${barA}/${barsA}</b> · ${NAMES.b} <b>${barB}/${barsB}</b>`;
+      statusR.textContent = left === refBars && pos % (S.ref === 'a' ? ga.bar : gb.bar) < 0.5 ? 'together!' : `together in ${left} bar${left > 1 ? 's' : ''}`;
+    }
+  }
+
+  // ===================================================================
+  // Share link: #p1.<base64url JSON>  (stays in the browser)
+  // ===================================================================
+  let ready = false, linkTimer = null;
+  const b64 = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64 = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
+  function getState() {
+    const L = x => ({ n: x.n, u: x.u, vol: x.vol, mute: x.mute ? 1 : 0, solo: x.solo ? 1 : 0 });
+    return { v: 1, mode: S.mode, bpm: S.bpm, ref: S.ref, click: S.click ? 1 : 0, ci: S.countIn ? 1 : 0, a: L(S.a), b: L(S.b) };
+  }
+  function applyState(st) {
+    if (!st || typeof st !== 'object') throw new Error('bad');
+    const clampN = n => Number.isInteger(n) ? Math.max(MIN_N, Math.min(MAX_N, n)) : 3;
+    S.mode = st.mode === 'm' ? 'm' : 'r';
+    S.ref = st.ref === 'b' ? 'b' : 'a';
+    S.click = !!st.click; S.countIn = st.ci === undefined ? true : !!st.ci;
+    ['a', 'b'].forEach(id => {
+      const x = st[id] || {};
+      S[id].n = clampN(x.n);
+      S[id].u = x.u === 0.5 ? 0.5 : 1;
+      S[id].vol = Number.isFinite(x.vol) ? Math.max(0, Math.min(100, x.vol)) : 90;
+      S[id].mute = !!x.mute; S[id].solo = !!x.solo;
+    });
+    setBpm(Number.isFinite(st.bpm) ? st.bpm : 80);
+    paintAll(); applyLevels();
+  }
+  function changed() {
+    if (!ready) return;
+    clearTimeout(linkTimer);
+    linkTimer = setTimeout(() => {
+      linkTimer = null;
+      history.replaceState(null, '', '#p1.' + b64(JSON.stringify(getState())));
+    }, 250);
+  }
+  function loadFromHash() {
+    const h = location.hash.slice(1);
+    if (!h) return;
+    try {
+      if (!h.startsWith('p1.')) throw new Error('unknown');
+      applyState(JSON.parse(unb64(h.slice(3))));
+      restartIfPlaying();
+    } catch (e) { toast("Couldn't open that link"); }
+  }
+  window.addEventListener('hashchange', loadFromHash);
+
+  let toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+  document.getElementById('share').addEventListener('click', async () => {
+    if (linkTimer) { clearTimeout(linkTimer); linkTimer = null; history.replaceState(null, '', '#p1.' + b64(JSON.stringify(getState()))); }
+    const url = location.href;
+    if (navigator.share) { try { await navigator.share({ title: 'Polyrhythm', url }); } catch (e) {} return; }
+    try { await navigator.clipboard.writeText(url); toast('Link copied'); }
+    catch (e) { prompt('Copy this link:', url); }
+  });
+
+  // ---------- start ----------
+  paintAll();
+  loadFromHash();
+  ready = true;
+})();
+</script>
+</body>
+</html>

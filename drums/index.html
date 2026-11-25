@@ -192,6 +192,11 @@
 
   /* ---------- how to use ---------- */
   .help{ margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .lab-link{
+    display: block; background: var(--panel); border-radius: 12px; padding: 13px 14px;
+    color: var(--text); text-decoration: none; font-size: 15px; font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
   .help h2{ font-size: 13px; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .help details{ background: var(--panel); border-radius: 12px; }
   .help summary{
@@ -348,6 +353,7 @@
 
   <section class="help" aria-label="How to use">
     <h2>How to use</h2>
+    <a class="lab-link" href="../poly/">🔀 Try the Polyrhythm Lab: hear 4 over 3, 5/4 against 7/8 and more →</a>
 
     <details>
       <summary><span class="ico">▶</span>Play &amp; tempo</summary>

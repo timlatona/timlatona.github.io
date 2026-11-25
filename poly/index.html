@@ -87,6 +87,10 @@
   .line[data-line="b"]{ --c: var(--b); }
   .line-name{ display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; min-width: 0; }
   .line-name .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+  .snd{
+    flex: none; height: 30px; padding: 0 4px; border-radius: 8px; font-size: 15px; font-weight: 700;
+    background: transparent; color: var(--text); border: 1px solid var(--step-beat);
+  }
   .line-name small{ font-weight: 500; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .line-ctl{ display: flex; align-items: center; gap: 6px; }
   .stepper{ display: flex; align-items: center; background: var(--step); border-radius: 10px; }
@@ -123,6 +127,10 @@
   #tap{ font-size: 13px; }
   #tempo{ width: 100%; accent-color: var(--accent); height: 26px; margin: 0; }
   .toggles{ grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .vv{ flex: 1 1 140px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .vv[hidden]{ display: none; }
+  #voicevol{ flex: 1; min-width: 60px; accent-color: var(--text); height: 26px; margin: 0; }
+  @media (max-width: 430px){ .line-name small{ display: none; } }
   .toggle{ height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
   .toggle[aria-pressed="true"]{ background: var(--step-beat); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
   .beat-now{
@@ -238,6 +246,7 @@
         <button class="toggle" id="countin" aria-pressed="true">Count-in</button>
         <button class="toggle" id="bell" aria-pressed="true">Bell on 1</button>
         <button class="toggle" id="voice" aria-pressed="false">Voice</button>
+        <label class="vv" id="vv" hidden>Voice vol <input type="range" id="voicevol" min="0" max="100" aria-label="Voice volume"></label>
         <span class="beat-now" id="beat-now">–</span>
       </div>
     </section>
@@ -293,7 +302,8 @@
           <li><b>Click</b> plays a metronome on the counted line, even if that line is muted.</li>
           <li><b>Count-in</b> plays one bar of click before the lines start.</li>
           <li>The <b>first note of each bar</b> is accented: much louder, with a punchier kick and a fuller clap. The other notes are about a third as loud.</li>
-          <li><b>Voice</b> counts the counted line out loud ("one, two, three…"), including the count-in. Each number is timed so its vowel lands on the beat.</li>
+          <li><b>The sound picker</b> on each line (Kick, Clap or Voice) sets what that line plays. Set a line to <b>Voice</b> and it counts its own notes out loud. If both lines are voices, the second is pitched higher and they sit on opposite sides, so you can follow "1 2 3" against "1 2 3 4".</li>
+          <li><b>Voice</b> (next to Click) counts the counted line out loud ("one, two, three…"), including the count-in. Each number is timed so its vowel lands on the beat. The slider next to it sets the voice volume.</li>
           <li><b>Bell on 1</b> adds a short bell on each line's "1", a low bell for the kick and a high bell for the clap. It's the easiest way to hear the bars drift apart in polymeter. Turn it off once you can hear the starts without it.</li>
         </ul>
       </div>
@@ -343,10 +353,13 @@
   const MIN_N = 2, MAX_N = 9;
   const S = {
     mode: 'r', bpm: 80, ref: 'a', click: false, countIn: true, bell: true, voice: false,
-    a: { n: 3, u: 1, vol: 90, mute: false, solo: false },
-    b: { n: 4, u: 1, vol: 90, mute: false, solo: false },
+    voiceVol: 45,                       // volume of the spoken count (Voice toggle)
+    a: { n: 3, u: 1, vol: 90, mute: false, solo: false, sound: 'kick' },
+    b: { n: 4, u: 1, vol: 90, mute: false, solo: false, sound: 'clap' },
   };
-  const NAMES = { a: 'Kick', b: 'Clap' };
+  // a line's name follows its sound; two voice lines are "Voice" (normal) and "High voice"
+  const nameOf = id => ({ kick: 'Kick', clap: 'Clap', voice: id === 'a' ? 'Voice' : 'High voice' })[S[id].sound];
+  const needVoice = () => S.voice || S.a.sound === 'voice' || S.b.sound === 'voice';
   const other = id => id === 'a' ? 'b' : 'a';
 
   const PRESETS = [
@@ -414,7 +427,7 @@
         lineOut[id] = g;
       });
       clickOut = ctx.createGain(); clickOut.gain.value = 0.5; clickOut.connect(master);
-      voiceOut = ctx.createGain(); voiceOut.gain.value = 1.1; voiceOut.connect(master);
+      voiceOut = ctx.createGain(); voiceOut.connect(master);
       applyLevels();
     }
     if (ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -439,16 +452,22 @@
     })().catch(() => { toast("Couldn't load the voice"); }).finally(() => { voiceLoading = null; });
     return voiceLoading;
   }
-  function speak(t, num) {
-    if (!voiceBufs || voiceCtx !== ctx || num < 1 || num > 9) { if (S.voice && voiceCtx !== ctx) loadVoice(); return; }
-    const start = Math.max(ctx.currentTime, t - VOICE_ONSET[num - 1] / 1000);
+  // say a number at time t (its vowel lands on t). `key` keeps a separate cut-off per voice,
+  // so a voice line never chokes the counting voice or the other line.
+  const lastWord = {};
+  function say(t, num, out, rate, key) {
+    if (!voiceBufs || voiceCtx !== ctx || num < 1 || num > 9) { if (needVoice() && voiceCtx !== ctx) loadVoice(); return; }
+    const start = Math.max(ctx.currentTime, t - VOICE_ONSET[num - 1] / 1000 / rate);
     const src = ctx.createBufferSource();
     src.buffer = voiceBufs[num - 1];
-    src.connect(voiceOut);
-    if (lastVoice) { try { lastVoice.stop(start); } catch (e) {} }   // fast tempos: cut the previous word
+    src.playbackRate.value = rate;
+    src.connect(out);
+    if (lastWord[key]) { try { lastWord[key].stop(start); } catch (e) {} }   // fast tempos: cut the previous word
     src.start(start);
-    lastVoice = src;
+    lastWord[key] = src;
   }
+  // the spoken count (Voice toggle) on the counted line
+  function speak(t, num) { say(t, num, voiceOut, 1, 'count'); }
 
   function resetAudio() {
     if (!ctx) return;
@@ -461,6 +480,7 @@
   }
   function applyLevels() {
     if (!ctx) return;
+    voiceOut.gain.setTargetAtTime(Math.pow(S.voiceVol / 100, 2), ctx.currentTime, 0.01);
     ['a', 'b'].forEach(id => {
       const v = audible(id) ? Math.pow(S[id].vol / 100, 2) : 0;
       lineOut[id].gain.setTargetAtTime(v, ctx.currentTime, 0.01);
@@ -515,8 +535,18 @@
     });
   }
   const ACCENT = 1, NORMAL = 0.32;     // other notes about a third as loud as the 1
-  function hit(id, t, first) {
-    SOUND[id](t, lineOut[id], first ? ACCENT : NORMAL, first);
+  // k = which note of the bar (0 = the "1")
+  function hit(id, t, k) {
+    const first = k === 0;
+    if (S[id].sound === 'voice') {
+      // a voice line counts its own notes; the second line is pitched up so the two are easy to tell apart
+      const g = ctx.createGain();
+      g.gain.value = (first ? 1 : 0.6) * 0.5;
+      g.connect(lineOut[id]);
+      say(t, k + 1, g, id === 'a' ? 1 : 1.22, id);
+    } else {
+      SOUND[S[id].sound](t, lineOut[id], first ? ACCENT : NORMAL, first);
+    }
     if (first && S.bell) bell(t, lineOut[id], id);
   }
   function clickSound(t, accent) {
@@ -525,7 +555,7 @@
     const g = env(t, accent ? 0.9 : 0.55, 0.035);
     o.connect(g).connect(clickOut); o.start(t); o.stop(t + 0.05);
   }
-  const SOUND = { a: kick, b: clap };
+  const SOUND = { kick, clap };
 
   // ===================================================================
   // Scheduler: each line on its own clock, positions in beats, mapped to
@@ -561,8 +591,8 @@
       if (t > horizon) break;
       const late = t < ctx.currentTime - 0.05;   // fell behind (busy phone): skip, don't burst
       const hitA = Math.abs(beats.a - m) < EPS, hitB = Math.abs(beats.b - m) < EPS, hitC = Math.abs(beats.c - m) < EPS;
-      if (hitA) { if (!late) hit('a', t, next.a % ga.n === 0); next.a++; }
-      if (hitB) { if (!late) hit('b', t, next.b % gb.n === 0); next.b++; }
+      if (hitA) { if (!late) hit('a', t, next.a % ga.n); next.a++; }
+      if (hitB) { if (!late) hit('b', t, next.b % gb.n); next.b++; }
       if (hitC) {
         const k = next.c;
         const inBar = ((k % cg.n) + cg.n) % cg.n;
@@ -578,7 +608,7 @@
   const icon = document.getElementById('play-icon');
   function start() {
     ensureAudio();
-    if (S.voice) loadVoice();
+    if (needVoice()) loadVoice();
     playing = true;
     spb = 60 / S.bpm;
     resetPositions(S.countIn);
@@ -655,18 +685,22 @@
   function buildLine(id) {
     const el = document.getElementById('line-' + id);
     el.innerHTML = `
-      <div class="line-name"><span class="dot"></span>${NAMES[id]} <small class="desc"></small></div>
+      <div class="line-name"><span class="dot"></span>
+        <select class="snd" aria-label="Sound for this line">
+          <option value="kick">Kick</option><option value="clap">Clap</option><option value="voice">Voice</option>
+        </select>
+        <small class="desc"></small></div>
       <div class="line-ctl">
         <div class="stepper">
           <button class="dn" aria-label="Fewer">−</button><span class="n"></span><button class="up" aria-label="More">+</button>
         </div>
         <button class="unit" aria-label="Note value"></button>
-        <button class="ms mute" aria-label="Mute ${NAMES[id]}">M</button>
-        <button class="ms solo" aria-label="Solo ${NAMES[id]}">S</button>
+        <button class="ms mute" aria-label="Mute ${nameOf(id)}">M</button>
+        <button class="ms solo" aria-label="Solo ${nameOf(id)}">S</button>
       </div>
       <div class="line-bottom">
         <button class="count-btn" aria-label="Count this line">Count</button>
-        <input type="range" min="0" max="100" aria-label="${NAMES[id]} volume">
+        <input type="range" min="0" max="100" aria-label="${nameOf(id)} volume">
       </div>`;
     const q = s => el.querySelector(s);
     const L = S[id];
@@ -679,6 +713,11 @@
     q('.count-btn').addEventListener('click', () => { if (S.ref === id) return; S.ref = id; paintAll(); restartIfPlaying(); changed(); });
     const vol = q('input');
     vol.addEventListener('input', () => { L.vol = +vol.value; applyLevels(); changed(); });
+    q('.snd').addEventListener('change', e => {
+      L.sound = e.target.value;
+      if (L.sound === 'voice') { ensureAudio(); loadVoice(); }
+      paintAll(); changed();
+    });
     lineEls[id] = { el, q };
   }
   buildLine('a'); buildLine('b');
@@ -705,16 +744,23 @@
       cb.textContent = S.ref === id ? '● Counting' : 'Count';
       q('input').value = L.vol;
       q('.desc').textContent = describe(id);
+      q('.snd').value = L.sound;
+      q('.mute').setAttribute('aria-label', 'Mute ' + nameOf(id));
+      q('.solo').setAttribute('aria-label', 'Solo ' + nameOf(id));
+      q('input').setAttribute('aria-label', nameOf(id) + ' volume');
     });
     document.getElementById('click').setAttribute('aria-pressed', S.click);
     document.getElementById('countin').setAttribute('aria-pressed', S.countIn);
     document.getElementById('bell').setAttribute('aria-pressed', S.bell);
     document.getElementById('voice').setAttribute('aria-pressed', S.voice);
+    document.getElementById('vv').hidden = !S.voice;
+    document.getElementById('voicevol').value = S.voiceVol;
     sizeCanvas();
   }
   document.getElementById('click').addEventListener('click', () => { S.click = !S.click; paintAll(); changed(); });
   document.getElementById('countin').addEventListener('click', () => { S.countIn = !S.countIn; paintAll(); changed(); });
   document.getElementById('bell').addEventListener('click', () => { S.bell = !S.bell; paintAll(); changed(); });
+  document.getElementById('voicevol').addEventListener('input', e => { S.voiceVol = +e.target.value; applyLevels(); changed(); });
   document.getElementById('voice').addEventListener('click', () => {
     S.voice = !S.voice;
     if (S.voice) { ensureAudio(); loadVoice(); }
@@ -813,7 +859,7 @@
       g2.fillStyle = 'rgba(232,232,236,.55)';
       g2.font = '600 10px -apple-system, system-ui, sans-serif';
       g2.textBaseline = 'bottom';
-      g2.fillText(S.mode === 'm' ? `${NAMES[id]} ${S[id].n}/${S[id].u === 1 ? 4 : 8}` : `${NAMES[id]} ${S[id].n}`, pad - 4, y - 13);
+      g2.fillText(S.mode === 'm' ? `${nameOf(id)} ${S[id].n}/${S[id].u === 1 ? 4 : 8}` : `${nameOf(id)} ${S[id].n}`, pad - 4, y - 13);
     });
 
     // connectors where both lines land together
@@ -854,7 +900,7 @@
       } else {
         const a8 = S.a.n * S.a.u * 2, b8 = S.b.n * S.b.u * 2, L = lcm(a8, b8);
         statusL.innerHTML = `<b>${S.a.n}/${S.a.u === 1 ? 4 : 8}</b> vs <b>${S.b.n}/${S.b.u === 1 ? 4 : 8}</b>`;
-        statusR.textContent = `realign every ${L / a8} bars of ${NAMES.a.toLowerCase()} · ${L / b8} of ${NAMES.b.toLowerCase()}`;
+        statusR.textContent = `realign every ${L / a8} bars of ${nameOf('a').toLowerCase()} · ${L / b8} of ${nameOf('b').toLowerCase()}`;
       }
       return;
     }
@@ -866,14 +912,14 @@
     if (inCount) { statusL.innerHTML = '<b>Count-in…</b>'; statusR.textContent = ''; return; }
     if (S.mode === 'r') {
       statusL.innerHTML = `Bar <b>${Math.floor(beat / P) + 1}</b>`;
-      statusR.textContent = `counting ${NAMES[S.ref].toLowerCase()} (${rg.n})`;
+      statusR.textContent = `counting ${nameOf(S.ref).toLowerCase()} (${rg.n})`;
     } else {
       const ga = lineGeom('a'), gb = lineGeom('b');
       const barA = Math.floor(pos / ga.bar) + 1, barsA = P / ga.bar;
       const barB = Math.floor(pos / gb.bar) + 1, barsB = P / gb.bar;
       const refBars = S.ref === 'a' ? barsA : barsB, refBar = S.ref === 'a' ? barA : barB;
       const left = refBars - refBar + 1;
-      statusL.innerHTML = `${NAMES.a} <b>${barA}/${barsA}</b> · ${NAMES.b} <b>${barB}/${barsB}</b>`;
+      statusL.innerHTML = `${nameOf('a')} <b>${barA}/${barsA}</b> · ${nameOf('b')} <b>${barB}/${barsB}</b>`;
       statusR.textContent = left === refBars && pos % (S.ref === 'a' ? ga.bar : gb.bar) < 0.5 ? 'together!' : `together in ${left} bar${left > 1 ? 's' : ''}`;
     }
   }
@@ -885,8 +931,8 @@
   const b64 = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const unb64 = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
   function getState() {
-    const L = x => ({ n: x.n, u: x.u, vol: x.vol, mute: x.mute ? 1 : 0, solo: x.solo ? 1 : 0 });
-    return { v: 1, mode: S.mode, bpm: S.bpm, ref: S.ref, click: S.click ? 1 : 0, ci: S.countIn ? 1 : 0, bell: S.bell ? 1 : 0, voice: S.voice ? 1 : 0, a: L(S.a), b: L(S.b) };
+    const L = x => ({ n: x.n, u: x.u, vol: x.vol, mute: x.mute ? 1 : 0, solo: x.solo ? 1 : 0, snd: x.sound });
+    return { v: 1, mode: S.mode, bpm: S.bpm, ref: S.ref, click: S.click ? 1 : 0, ci: S.countIn ? 1 : 0, bell: S.bell ? 1 : 0, voice: S.voice ? 1 : 0, vv: S.voiceVol, a: L(S.a), b: L(S.b) };
   }
   function applyState(st) {
     if (!st || typeof st !== 'object') throw new Error('bad');
@@ -896,12 +942,15 @@
     S.click = !!st.click; S.countIn = st.ci === undefined ? true : !!st.ci;
     S.bell = st.bell === undefined ? true : !!st.bell;
     S.voice = !!st.voice;
+    S.voiceVol = Number.isFinite(st.vv) ? Math.max(0, Math.min(100, st.vv)) : 45;
+    if (needVoice() && ctx) loadVoice();
     ['a', 'b'].forEach(id => {
       const x = st[id] || {};
       S[id].n = clampN(x.n);
       S[id].u = x.u === 0.5 ? 0.5 : 1;
       S[id].vol = Number.isFinite(x.vol) ? Math.max(0, Math.min(100, x.vol)) : 90;
       S[id].mute = !!x.mute; S[id].solo = !!x.solo;
+      S[id].sound = ['kick', 'clap', 'voice'].includes(x.snd) ? x.snd : (id === 'a' ? 'kick' : 'clap');
     });
     setBpm(Number.isFinite(st.bpm) ? st.bpm : 80);
     paintAll(); applyLevels();
